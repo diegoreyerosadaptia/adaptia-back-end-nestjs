@@ -11,6 +11,8 @@ export default registerAs(
       url: process.env.DATABASE_URL,
       entities: [`${__dirname}/../**/*.entity{.ts,.js}`],
       synchronize: true,
-      ssl: isSupabase ? { rejectUnauthorized: false } : false,
+      ssl: {
+        rejectUnauthorized: false, // ✅ obligatorio con Supabase en Vercel
+      },
     }) as TypeOrmModuleOptions,
 );
