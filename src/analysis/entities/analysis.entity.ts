@@ -20,9 +20,6 @@ import {
     @PrimaryGeneratedColumn('uuid')
     id: string;
   
-    @Column({ type: 'uuid', nullable: false })
-    organization_id: string;
-  
     @Column('enum', { enum: ANALYSIS_STATUS, default: ANALYSIS_STATUS[0] })
     status: AnalysisStatus;
   

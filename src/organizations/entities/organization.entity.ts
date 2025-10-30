@@ -7,16 +7,18 @@ import {
     OneToMany,
     DeleteDateColumn,
     UpdateDateColumn,
+    Index,
   } from 'typeorm';
   import { User } from 'src/users/entities/user.entity';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
+import { EsgAnalysis } from 'src/esg_analysis/entities/esg_analysis.entity';
 
   export const EMPLYEES_NUMBER = [
     '1-9',
     '10-99',
     '100-499',
     '500-1000',
-    '1000-5000',
+    '1000-4999',
     '5000-10000',
     '+10000',] as const;
 export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
@@ -31,9 +33,15 @@ export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
   
     @Column({ nullable: false })
     lastName: string;
+
+    @Column('varchar', { length: 255 })
+    email: string;
   
     @Column({ nullable: false })
     company: string;
+
+    @Column({ nullable: false })
+    title: string;
   
     @Column({ nullable: false })
     industry: string;
@@ -52,9 +60,16 @@ export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
   
     @Column({ nullable: true })
     document: string;
+
+    @Index({ unique: true })
+    @Column({ type: 'uuid', nullable: true })
+    claimToken: string | null;
   
-    @Column({ type: 'uuid' , nullable: true})
-    owner_id: string;
+    @Column({ type: 'timestamptz', nullable: true })
+    claimExpiresAt: Date | null;
+  
+    @Column({ type: 'timestamptz', nullable: true })
+    claimedAt: Date | null;
 
     @ManyToOne(() => User, (user) => user.organizations, {
       onDelete: 'CASCADE', nullable: true
@@ -65,6 +80,11 @@ export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
       cascade: true,
     })
     analysis: Analysis[];
+
+    @OneToMany(() => EsgAnalysis, (esgAnalysis) => esgAnalysis.organization, {
+      cascade: true,
+    })
+    esgAnalysis: EsgAnalysis[];
 
     @DeleteDateColumn()
     deletedAt: Date;

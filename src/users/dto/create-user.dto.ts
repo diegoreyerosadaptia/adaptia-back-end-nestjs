@@ -27,5 +27,13 @@ import {
   
     @IsEnum(USER_ROLES)
     role: UserRole;
+
+    @IsString()
+    @IsOptional()
+    orgId?: string
+    
+    @IsString()
+    @IsOptional()
+    claimToken?: string
   }
   

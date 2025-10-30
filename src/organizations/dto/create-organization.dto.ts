@@ -18,10 +18,18 @@ import {
     @IsNotEmpty()
     @IsString()
     lastName: string;
+
+    @IsNotEmpty()
+    @IsString()
+    email: string;
   
     @IsNotEmpty()
     @IsString()
     company: string;
+
+    @IsNotEmpty()
+    @IsString()
+    title: string;
   
     @IsNotEmpty()
     @IsString()
@@ -47,6 +55,6 @@ import {
     document?: string;
   
     @IsOptional()
-    owner_id: string;
+    ownerId: string;
   }
   

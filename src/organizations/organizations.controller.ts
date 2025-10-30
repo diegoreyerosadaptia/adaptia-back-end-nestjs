@@ -12,9 +12,9 @@ export class OrganizationsController {
     return this.organizationsService.create(createOrganizationDto);
   }
 
-  @Get()
-  findAll() {
-    return this.organizationsService.findAll();
+  @Get('user/:userId')
+  findAll(@Param('userId') userId: string) {
+    return this.organizationsService.findAll(userId);
   }
 
   @Get(':id')

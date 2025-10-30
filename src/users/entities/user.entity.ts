@@ -1,4 +1,5 @@
 import { Organization } from 'src/organizations/entities/organization.entity';
+import { PaymentMethod } from 'src/payments/payments-methods/entities/payments-method.entity';
 import {
   Column,
   CreateDateColumn,
@@ -39,6 +40,11 @@ export class User {
     onDelete: 'CASCADE',
   })
   organizations: Organization;
+
+  @OneToMany(() => PaymentMethod, (paymentMethod) => paymentMethod.user, {
+    onDelete: 'CASCADE',
+  })
+  paymentMethod: PaymentMethod;
 
   @DeleteDateColumn()
   deletedAt: Date;
