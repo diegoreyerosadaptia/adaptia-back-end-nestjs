@@ -17,7 +17,7 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const redisUrl = process.env.REDIS_URL;
-
+    
         if (redisUrl) {
           const url = new URL(redisUrl);
           return {
@@ -25,11 +25,15 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
               host: url.hostname,
               port: Number(url.port),
               password: url.password,
-              tls: {},
+              username: url.username || 'default',
+              tls: {}, // 🔒 obligatorio para Redis Cloud
+              maxRetriesPerRequest: null, // 🧩 evita timeout por intentos
+              enableReadyCheck: false,    // 🚀 acelera conexión inicial
             },
           };
         }
-
+    
+        // fallback local
         return {
           redis: {
             host: 'localhost',
@@ -38,7 +42,7 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
         };
       },
       inject: [ConfigService],
-    }),
+    }),    
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
