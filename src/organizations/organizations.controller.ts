@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
-import { SupabaseAuthGuard } from 'src/utils/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../utils/guards/supabase-auth.guard';
 
 @Controller('organizations')
 @UseGuards(SupabaseAuthGuard)
