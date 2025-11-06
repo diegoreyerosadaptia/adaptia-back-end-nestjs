@@ -9,6 +9,7 @@ export class EsgJobsController {
 
   @Post()
   async createJob(@Body() dto: CreateEsgAnalysisDto) {
+    console.log(dto)
     const { jobId } = await this.jobsService.createJob(dto);
     return { message: '✅ Análisis ESG encolado', jobId };
   }

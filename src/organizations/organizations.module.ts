@@ -8,7 +8,7 @@ import { User } from 'src/users/entities/user.entity';
 import { EsgAnalysisModule } from 'src/esg_analysis/esg_analysis.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organization, Analysis, User]), EsgAnalysisModule],
+  imports: [TypeOrmModule.forFeature([Organization, Analysis, User, Analysis]), EsgAnalysisModule],
   controllers: [OrganizationsController],
   providers: [OrganizationsService],
 })

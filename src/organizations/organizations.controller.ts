@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { SupabaseAuthGuard } from 'src/utils/guards/supabase-auth.guard';
 
 @Controller('organizations')
+@UseGuards(SupabaseAuthGuard)
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
@@ -12,11 +14,12 @@ export class OrganizationsController {
     return this.organizationsService.create(createOrganizationDto);
   }
 
-  @Get('user/:userId')
-  findAll(@Param('userId') userId: string) {
+  @Get()
+  findAll(@Req() req) {
+    const userId = req.user.id;
     return this.organizationsService.findAll(userId);
   }
-
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.organizationsService.findOne(id);
