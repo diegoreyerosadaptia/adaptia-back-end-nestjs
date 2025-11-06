@@ -22,7 +22,8 @@ export class EsgAnalysisService {
   async runPythonEsgAnalysis(dto: CreateEsgAnalysisDto): Promise<EsgAnalysisResult> {
     const MAX_RETRIES = 1;
     const RETRY_DELAY = 60_000;
-    const TIMEOUT_MS = 30 * 60 * 1000;
+    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
+
   
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       console.log(`🚀 Intento ${attempt}/${MAX_RETRIES} para ${dto.organization_name}`);
