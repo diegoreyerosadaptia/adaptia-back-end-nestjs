@@ -13,27 +13,29 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
 
 @Module({
   imports: [
+    // 🧩 Bull / Redis Config
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const redisUrl = process.env.REDIS_URL;
-    
+
         if (redisUrl) {
           const url = new URL(redisUrl);
+          console.log(`🔌 Conectando a Redis: ${url.hostname}:${url.port}`);
+
           return {
             redis: {
               host: url.hostname,
               port: Number(url.port),
               password: url.password,
               username: url.username || 'default',
-              tls: {}, // 🔒 obligatorio para Redis Cloud
-              maxRetriesPerRequest: null, // 🧩 evita timeout por intentos
-              enableReadyCheck: false,    // 🚀 acelera conexión inicial
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
             },
           };
         }
-    
-        // fallback local
+
+        console.warn('⚠️ REDIS_URL no definida, usando localhost');
         return {
           redis: {
             host: 'localhost',
@@ -42,12 +44,16 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
         };
       },
       inject: [ConfigService],
-    }),    
+    }),
+
+    // ⚙️ Config global
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
       load: [AppConfig, DatabaseConfig],
     }),
+
+    // 🗄️ Base de datos
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -55,6 +61,8 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
       }),
       inject: [ConfigService],
     }),
+
+    // 📦 Módulos
     AuthModule,
     UsersModule,
     OrganizationsModule,
