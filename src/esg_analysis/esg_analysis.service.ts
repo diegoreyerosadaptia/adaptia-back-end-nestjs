@@ -31,7 +31,7 @@ export class EsgAnalysisService {
       const hardTimeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   
       try {
-        console.log("🌍 Intentando conectar con:", `${process.env.PYTHON_API_URL}/esg/esg-analysis-with-pdf-api`);
+        console.log("🌍 Intentando conectar con:", `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-with-pdf-api`);
 
         const response = await fetch(
           `${process.env.PYTHON_API_URL}/esg/esg-analysis-with-pdf-api`,
