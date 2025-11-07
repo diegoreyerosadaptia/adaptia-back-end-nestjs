@@ -98,14 +98,26 @@ export class OrganizationsService {
 
   async findAll(userId: string) {
     try {
+      // 1️⃣ Buscar el usuario para saber su rol
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+  
+      if (!user) {
+        throw new NotFoundException('Usuario no encontrado');
+      }
+  
+      // 2️⃣ Si es ADMIN o SUPERADMIN, traer todas las organizaciones
+      const whereCondition =
+        user.role === 'ADMIN'
+          ? {} // sin filtro: todas las organizaciones
+          : { owner: { id: userId } }; // solo las del owner
+  
+      // 3️⃣ Buscar organizaciones con las relaciones necesarias
       return await this.organizationRepository.find({
-        where: {
-          owner: { id: userId }, // 🔥 filtra por el owner relacionado
-        },
+        where: whereCondition,
         relations: ['analysis', 'owner'],
-        order: {
-          createdAt: 'DESC', // opcional: las más nuevas primero
-        },
+        order: { createdAt: 'DESC' },
       });
     } catch (error) {
       this.logger.error(error.message, error.stack);
