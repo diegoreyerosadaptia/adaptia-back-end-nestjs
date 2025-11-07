@@ -9,6 +9,7 @@ export class MercadoPagoController {
   @Post('webhook')
   @UseGuards(MercadopagoSignatureGuard)
   async receiveWebhook(@Body() payload: any) {
+    console.log('🔔 Webhook recibido');
     return await this.mercadopagoService.receiveWebhook(payload);
   }
 

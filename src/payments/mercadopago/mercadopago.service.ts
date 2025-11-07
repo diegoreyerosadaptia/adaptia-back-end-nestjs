@@ -14,6 +14,7 @@ import { EMPLYEES_NUMBER, Organization } from 'src/organizations/entities/organi
 import { PaymentsMethodsService } from '../payments-methods/payments-methods.service';
 import { PaymentMethod } from '../payments-methods/entities/payments-method.entity';
 import { EsgJobsService } from 'src/esg_analysis/esg_job.service';
+import { Analysis } from 'src/analysis/entities/analysis.entity';
 
 @Injectable()
 export class MercadopagoService {
@@ -24,7 +25,7 @@ export class MercadopagoService {
 
   // 📌 Mapeo de precios predefinido
   private readonly PRICE_BY_EMPLOYEE_RANGE: Record<typeof EMPLYEES_NUMBER[number], number> = {
-    '1-9': 0.01,
+    '1-9': 1,
     '10-99': 400,
     '100-499': 800,
     '500-1000': 1200,
@@ -36,6 +37,8 @@ export class MercadopagoService {
   constructor(
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
+    @InjectRepository(Analysis)
+    private readonly analysisRepository: Repository<Analysis>,
     @InjectRepository(PaymentMethod)
     private readonly paymentMethodRepository: Repository<PaymentMethod>,
     private readonly configService: ConfigService,
@@ -78,7 +81,7 @@ export class MercadopagoService {
             description,
             unit_price: price,
             quantity: 1,
-            currency_id: 'USD',
+            currency_id: 'ARS',
           },
         ],
         payer: {
@@ -278,18 +281,36 @@ const paymentDetails = await paymentService.get({ id: paymentId });
       `);
       const org = await this.organizationRepository.findOne({
         where: { id: orgId },
+        relations: ['analysis'],
       });
-      
+    
       if (!org) {
         throw new NotFoundException('Organización no encontrada');
       }
-      
+    
+      // 🔹 Verificar que haya análisis
+      if (!org.analysis || org.analysis.length === 0) {
+        throw new NotFoundException('No se encontraron análisis asociados a la organización');
+      }
+    
+      // 🔹 Tomar el último análisis
+      const lastAnalysis = org.analysis[org.analysis.length - 1];
+    
+      // 🔹 Cambiar su estado de pago
+      lastAnalysis.payment_status = 'COMPLETED';
+    
+      // 🔹 Guardar los cambios
+      await this.dataSource.getRepository('Analysis').save(lastAnalysis);
+    
+      // 🔹 Crear el nuevo job
       await this.jobsService.createJob({
         organization_name: org.company,
         country: org.country,
         website: org.website,
         organizationId: org.id,
       });
+    
+      console.log(`✅ Estado de pago actualizado a COMPLETED para el análisis ${lastAnalysis.id}`);
       
     } catch (error) {
       this.logger.error(`Error processing approved payment: ${error.message}`, {
