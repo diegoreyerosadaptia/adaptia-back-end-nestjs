@@ -28,6 +28,6 @@ import { Analysis } from 'src/analysis/entities/analysis.entity';
     EsgAnalysisController,
     EsgJobsController,
   ],
-  exports: [EsgAnalysisService],
+  exports: [EsgAnalysisService, EsgJobsService],
 })
 export class EsgAnalysisModule {}

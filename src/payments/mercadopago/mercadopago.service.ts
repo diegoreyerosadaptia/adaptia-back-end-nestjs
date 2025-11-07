@@ -13,15 +13,18 @@ import { User } from 'src/users/entities/user.entity';
 import { EMPLYEES_NUMBER, Organization } from 'src/organizations/entities/organization.entity';
 import { PaymentsMethodsService } from '../payments-methods/payments-methods.service';
 import { PaymentMethod } from '../payments-methods/entities/payments-method.entity';
+import { EsgJobsService } from 'src/esg_analysis/esg_job.service';
 
 @Injectable()
 export class MercadopagoService {
   private readonly logger = new Logger(MercadopagoService.name);
   private mercadopagoClient: MercadoPagoConfig;
 
+
+
   // 📌 Mapeo de precios predefinido
   private readonly PRICE_BY_EMPLOYEE_RANGE: Record<typeof EMPLYEES_NUMBER[number], number> = {
-    '1-9': 200,
+    '1-9': 0.01,
     '10-99': 400,
     '100-499': 800,
     '500-1000': 1200,
@@ -38,6 +41,7 @@ export class MercadopagoService {
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
     private readonly paymentsMethodsService: PaymentsMethodsService,
+    private readonly jobsService: EsgJobsService
   ) {
     this.mercadopagoClient = new MercadoPagoConfig({
       accessToken: this.configService.getOrThrow<string>(
@@ -272,6 +276,21 @@ const paymentDetails = await paymentService.get({ id: paymentId });
       this.logger.log(`Successfully processed payment and created user plan:
         Payment ID: ${paymentId}
       `);
+      const org = await this.organizationRepository.findOne({
+        where: { id: orgId },
+      });
+      
+      if (!org) {
+        throw new NotFoundException('Organización no encontrada');
+      }
+      
+      await this.jobsService.createJob({
+        organization_name: org.company,
+        country: org.country,
+        website: org.website,
+        organizationId: org.id,
+      });
+      
     } catch (error) {
       this.logger.error(`Error processing approved payment: ${error.message}`, {
         error: error.stack,
