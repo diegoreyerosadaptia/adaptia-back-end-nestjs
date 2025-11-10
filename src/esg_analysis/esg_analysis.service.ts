@@ -42,6 +42,8 @@ export class EsgAnalysisService {
               organization_name: dto.organization_name,
               country: dto.country,
               website: dto.website,
+              industry: dto.industry,
+              document: dto.document
             }),
             signal: controller.signal,
           },

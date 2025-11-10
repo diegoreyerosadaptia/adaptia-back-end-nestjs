@@ -31,4 +31,14 @@ export class AnalysisController {
   remove(@Param('id') id: string) {
     return this.analysisService.remove(id);
   }
+
+  @Patch('statusPayment/:id')
+  updatePaymentStatus(@Param('id') id: string) {
+    return this.analysisService.updatePaymentStatus(id);
+  }
+
+  @Patch('sendAnalysis/:id')
+  sendAnalysisUser(@Param('id') id: string) {
+    return this.analysisService.sendAnalysisUser(id);
+  }
 }

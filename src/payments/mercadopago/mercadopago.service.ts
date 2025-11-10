@@ -25,9 +25,9 @@ export class MercadopagoService {
 
   // 📌 Mapeo de precios predefinido
   private readonly PRICE_BY_EMPLOYEE_RANGE: Record<typeof EMPLYEES_NUMBER[number], number> = {
-    '1-9': 0.01,
+    '1-9': 0.001,
     '10-99': 400,
-    '100-499': 800,
+    '100-499': 800,   
     '500-1000': 1200,
     '1000-4999': 1400,
     '5000-10000': 1600,
@@ -308,6 +308,8 @@ const paymentDetails = await paymentService.get({ id: paymentId });
         country: org.country,
         website: org.website,
         organizationId: org.id,
+        document: org.document,
+        industry: org.industry
       });
     
       console.log(`✅ Estado de pago actualizado a COMPLETED para el análisis ${lastAnalysis.id}`);

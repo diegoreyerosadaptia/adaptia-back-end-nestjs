@@ -113,4 +113,53 @@ export class AnalysisService {
       throw error;
     }
   }
+
+  async updatePaymentStatus(id: string) {
+    try {
+      const analysis = await this.analysisRepository.findOne({ where: { id } });
+
+      if (!analysis) {
+        throw new NotFoundException('Analysis not found');
+      }
+      if(analysis.payment_status === 'COMPLETED'){
+        analysis.payment_status = 'PENDING';
+      }else{
+        analysis.payment_status = 'COMPLETED';
+      }
+
+      await this.analysisRepository.save(analysis);
+
+      return analysis;
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        this.logger.error(error.message, error.stack);
+      }
+      throw error;
+    }
+  }
+
+  async sendAnalysisUser(id: string) {
+    try {
+      const analysis = await this.analysisRepository.findOne({ 
+        where: { id },
+        relations: ['organization','organization.owner']
+      });
+
+      if (!analysis) {
+        throw new NotFoundException('Analysis not found');
+      }
+      //usar resend para enviar al mail
+
+      analysis.shipping_status = 'SENT';
+
+      await this.analysisRepository.save(analysis);
+
+      return analysis;
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        this.logger.error(error.message, error.stack);
+      }
+      throw error;
+    }
+  }
 }

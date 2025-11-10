@@ -17,4 +17,12 @@ export class CreateEsgAnalysisDto {
     @IsString()
     @IsOptional()
     organizationId?: string
+
+    @IsString()
+    @IsNotEmpty()
+    industry: string
+
+    @IsString()
+    @IsOptional()
+    document: string
 }
