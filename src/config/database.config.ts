@@ -1,7 +1,7 @@
-import { registerAs } from '@nestjs/config';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { registerAs } from '@nestjs/config'
+import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 
-const isSupabase = process.env.DATABASE_URL?.includes('supabase.co');
+const isSupabase = process.env.DATABASE_URL?.includes('supabase.co')
 
 export default registerAs(
   'database',
@@ -12,17 +12,20 @@ export default registerAs(
     migrations: [`${__dirname}/../../db/migrations/*{.ts,.js}`],
     migrationsTableName: 'migrations',
 
-    // ✅ SSL solo si es Supabase o producción
+    // ✅ Forzar sincronización automática en cualquier entorno (incluye Supabase)
+    synchronize: true,
 
-    // ✅ En producción: false, en local: true
-    synchronize: process.env.NODE_ENV !== 'production',
+    // 🧩 Mostrar logs solo si no estás en producción
     logging: process.env.NODE_ENV !== 'production',
 
-    // 🔒 Evita errores si falta DATABASE_URL
+    // 🔒 Seguridad y timeout
     extra: {
       connectionTimeoutMillis: 10000,
+      ssl: isSupabase
+        ? {
+            rejectUnauthorized: false,
+          }
+        : undefined,
     },
-  }),
-);
-
-
+  })
+)
