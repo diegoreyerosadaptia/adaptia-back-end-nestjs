@@ -116,7 +116,7 @@ export class OrganizationsService {
       // 3️⃣ Buscar organizaciones con las relaciones necesarias
       return await this.organizationRepository.find({
         where: whereCondition,
-        relations: ['analysis', 'owner'],
+        relations: ['analysis', 'owner', 'esgAnalysis'],
         order: { createdAt: 'DESC' },
       });
     } catch (error) {

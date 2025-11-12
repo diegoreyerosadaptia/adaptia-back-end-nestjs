@@ -13,10 +13,18 @@ export class EsgJobProcessor {
 
     try {
       const result = await this.esgAnalysisService.runPythonEsgAnalysis(job.data);
-      console.log(`✅ Job ${job.id} completado exitosamente`);
+
+      if (result.status === 'INCOMPLETE') {
+        console.warn(`⚠️ Job ${job.id} completado parcialmente (estado: INCOMPLETE)`);
+      } else if (result.status === 'FAILED') {
+        console.error(`❌ Job ${job.id} falló en Python`);
+      } else {
+        console.log(`✅ Job ${job.id} completado exitosamente`);
+      }
+
       return result;
     } catch (error) {
-      console.error(`❌ Error en job ${job.id}:`, error);
+      console.error(`💥 Error crítico en job ${job.id}:`, error);
       throw error;
     }
   }

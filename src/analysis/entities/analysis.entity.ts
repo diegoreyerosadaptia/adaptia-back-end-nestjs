@@ -9,7 +9,7 @@ import {
   } from 'typeorm';
   import { Organization } from 'src/organizations/entities/organization.entity';
   
-  export const ANALYSIS_STATUS = ['PENDING', 'COMPLETED', 'FAILED'] as const;
+  export const ANALYSIS_STATUS = ['PENDING', 'COMPLETED', 'FAILED', 'INCOMPLETE'] as const;
   export type AnalysisStatus = (typeof ANALYSIS_STATUS)[number];
   
   export const PAYMENT_STATUS = ['PENDING', 'COMPLETED'] as const;

@@ -1,37 +1,17 @@
-import { Controller, Post, Body, Res, HttpException } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpException, NotFoundException, Param, Put } from '@nestjs/common';
 import { EsgAnalysisService } from './esg_analysis.service';
-import { CreateEsgAnalysisDto } from './dto/create-esg_analysis.dto';
-import type { Response } from 'express';
+
 
 @Controller('esg-analysis')
 export class EsgAnalysisController {
   constructor(private readonly esgAnalysisService: EsgAnalysisService) {}
 
-  @Post('generate')
-  async generateEsgAnalysis(
-    @Body() dto: CreateEsgAnalysisDto,
-    @Res() res: Response,
+  @Put(':id/json')
+  async updateAnalysisJson(
+    @Param('id') id: string,
+    @Body() json: any
   ) {
-    try {
-      const { filename, pdfBuffer, analysisJson } =
-        await this.esgAnalysisService.runPythonEsgAnalysis(dto);
-
-      res.set({
-        'Content-Type': 'application/json',
-      });
-
-      res.send({
-        filename,
-        pdf: pdfBuffer ? pdfBuffer.toString('base64') : null,
-        analysisJson,
-      });
-    } catch (error) {
-      if (error instanceof HttpException) {
-        return res
-          .status(error.getStatus())
-          .send({ message: error.message || 'Error en análisis ESG' });
-      }
-      return res.status(500).send({ message: 'Error interno en análisis ESG' });
-    }
+    const updated = await this.esgAnalysisService.updateAnalysisJson(id, json)
+    return { message: '✅ JSON actualizado correctamente', updated }
   }
-}
+}  

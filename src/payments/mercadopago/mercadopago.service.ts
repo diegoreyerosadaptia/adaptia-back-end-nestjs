@@ -25,7 +25,7 @@ export class MercadopagoService {
 
   // 📌 Mapeo de precios predefinido
   private readonly PRICE_BY_EMPLOYEE_RANGE: Record<typeof EMPLYEES_NUMBER[number], number> = {
-    '1-9': 0.001,
+    '1-9': 0.01,
     '10-99': 400,
     '100-499': 800,   
     '500-1000': 1200,
