@@ -32,11 +32,11 @@ export class EsgAnalysisService {
       try {
         console.log(
           '🌍 Intentando conectar con:',
-          `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-with-pdf-api`,
+          `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-api`,
         );
 
         const response = await fetch(
-          `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-with-pdf-api`,
+          `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-api`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
