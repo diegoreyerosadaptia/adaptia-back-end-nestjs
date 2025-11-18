@@ -1,11 +1,12 @@
 import { Injectable, HttpException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateEsgAnalysisDto } from './dto/create-esg_analysis.dto';
 import { EsgAnalysis } from './entities/esg_analysis.entity';
 import { Organization } from 'src/organizations/entities/organization.entity';
 import { EsgAnalysisResult } from 'src/types/esg-analysis-result.type';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
+import { GriContent } from './entities/gri_contents.entity';
 
 @Injectable()
 export class EsgAnalysisService {
@@ -16,6 +17,8 @@ export class EsgAnalysisService {
     private readonly organizationRepository: Repository<Organization>,
     @InjectRepository(Analysis)
     private readonly analysisRepository: Repository<Analysis>,
+    @InjectRepository(GriContent)
+    private readonly griRepo: Repository<GriContent>,
   ) {}
 
   async runPythonEsgAnalysis(dto: CreateEsgAnalysisDto): Promise<EsgAnalysisResult> {
@@ -176,6 +179,30 @@ export class EsgAnalysisService {
     await this.esgAnalysisRepository.save(analysis);
   
     return analysis;
+  }
+
+
+  async getGriByTemas(temas: string[]) {
+    // 1) Obtener todos los registros para los temas recibidos
+    const rows = await this.griRepo.find({
+      where: { tema: In(temas) },
+      order: { tema: 'ASC' },
+    });
+
+    // 2) Agrupar por tema (para tabs)
+    const grouped = temas.map((t) => ({
+      tema: t,
+      contenidos: rows
+        .filter((row) => row.tema === t)
+        .map((item) => ({
+          estandar_gri: item.estandar_gri,
+          numero_contenido: item.numero_contenido,
+          contenido: item.contenido,
+          requerimiento: item.requerimiento,
+        })),
+    }));
+
+    return { gri: grouped };
   }
   
 }

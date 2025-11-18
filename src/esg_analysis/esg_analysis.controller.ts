@@ -14,4 +14,11 @@ export class EsgAnalysisController {
     const updated = await this.esgAnalysisService.updateAnalysisJson(id, json)
     return { message: '✅ JSON actualizado correctamente', updated }
   }
+
+  @Post('gri/by-topics')
+  async getByTopics(@Body() body: any) {
+    console.log("🔥 BODY RECIBIDO:", body);
+    return this.esgAnalysisService.getGriByTemas(body.temas);
+  }
+  
 }  

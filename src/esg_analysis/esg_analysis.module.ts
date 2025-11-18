@@ -11,10 +11,11 @@ import { EsgAnalysisController } from './esg_analysis.controller';
 import { EsgJobsController } from './esg_jobs.controller';
 import { Organization } from 'src/organizations/entities/organization.entity';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
+import { GriContent } from './entities/gri_contents.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis]),
+    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis, GriContent]),
     BullModule.registerQueue({
       name: 'esg-analysis',  // 👈 importante: mismo nombre que usás en InjectQueue
     }),
