@@ -2,9 +2,7 @@ import {
     Entity,
     PrimaryGeneratedColumn,
     Column,
-    ManyToOne,
-    CreateDateColumn,
-    UpdateDateColumn,
+    ManyToOne
   } from 'typeorm';
 
 @Entity('gri_contents')
