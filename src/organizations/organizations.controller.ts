@@ -5,7 +5,6 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { SupabaseAuthGuard } from '../utils/guards/supabase-auth.guard';
 
 @Controller('organizations')
-@UseGuards(SupabaseAuthGuard)
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
@@ -15,6 +14,7 @@ export class OrganizationsController {
   }
 
   @Get()
+  @UseGuards(SupabaseAuthGuard)
   findAll(@Req() req) {
     const userId = req.user.id;
     return this.organizationsService.findAll(userId);
@@ -33,5 +33,14 @@ export class OrganizationsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.organizationsService.remove(id);
+  }
+
+  @Post('claim')
+  async claimOrg(
+    @Body('userId') userId: string,
+    @Body('orgId') orgId: string,
+    @Body('claim') claimToken: string,
+  ) {
+    return this.organizationsService.claimOrganization(userId, orgId, claimToken)
   }
 }

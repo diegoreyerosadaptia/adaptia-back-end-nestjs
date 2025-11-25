@@ -7,6 +7,7 @@ import { Organization } from 'src/organizations/entities/organization.entity';
 import { EsgAnalysisResult } from 'src/types/esg-analysis-result.type';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
+import { AnalysisStatusGateway } from './analysis-status.gateway';
 
 @Injectable()
 export class EsgAnalysisService {
@@ -19,25 +20,26 @@ export class EsgAnalysisService {
     private readonly analysisRepository: Repository<Analysis>,
     @InjectRepository(GriContent)
     private readonly griRepo: Repository<GriContent>,
+    private readonly statusGateway: AnalysisStatusGateway, // ⭐ agregado
   ) {}
 
   async runPythonEsgAnalysis(dto: CreateEsgAnalysisDto): Promise<EsgAnalysisResult> {
     const MAX_RETRIES = 1;
     const RETRY_DELAY = 60_000;
     const TIMEOUT_MS = 30 * 60 * 1000;
-  
+
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       console.log(`🚀 Intento ${attempt}/${MAX_RETRIES} para ${dto.organization_name}`);
-  
+
       const controller = new AbortController();
       const hardTimeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  
+
       try {
         console.log(
           '🌍 Intentando conectar con:',
           `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-api`,
         );
-  
+
         const response = await fetch(
           `${process.env.PYTHON_API_URL}/api/esg/esg-analysis-api`,
           {
@@ -53,68 +55,57 @@ export class EsgAnalysisService {
             signal: controller.signal,
           },
         );
-  
+
         clearTimeout(hardTimeout);
         console.log(`📡 Python API status: ${response.status}`);
-  
+
         const textResponse = await response.text();
         if (!response.ok) throw new Error(`Python API error: ${textResponse}`);
-  
+
         const result = JSON.parse(textResponse);
-  
-        // ✅ Convertir el PDF base64 a buffer (si existe)
+
+        // PDF
         const pdfBuffer = result.pdf_base64
           ? Buffer.from(result.pdf_base64, 'base64')
           : null;
-  
-        // ✅ Guardar PDF localmente (opcional)
+
         if (pdfBuffer) {
           const fs = await import('fs/promises');
           const filePath = `./tmp/${result.filename}`;
           await fs.mkdir('./tmp', { recursive: true });
           await fs.writeFile(filePath, pdfBuffer);
-          console.log(`📄 PDF guardado localmente en ${filePath}`);
+          console.log(`📄 PDF guardado: ${filePath}`);
         }
-  
-        // ✅ Buscar organización
+
         const org = await this.organizationRepository.findOne({
           where: { id: dto.organizationId },
           relations: ['analysis'],
         });
         if (!org) throw new NotFoundException('Organización no encontrada');
-  
-        // ⛔️ Si ya existe ESG analysis para esta organización, eliminarlo(s)
-        const previousEsg = await this.esgAnalysisRepository.find({
-          where: { organization: { id: org.id } },
-        });
-  
-        if (previousEsg.length > 0) {
-          console.log(`🧹 Eliminando ${previousEsg.length} ESG analysis anteriores de la org ${org.id}`);
+
+        // limpiar previos
+        const previousEsg = await this.esgAnalysisRepository.find({ where: { organization: { id: org.id } } });
+        if (previousEsg.length) {
           await this.esgAnalysisRepository.remove(previousEsg);
         }
-  
-        // ✅ Crear registro ESG SIEMPRE (aunque sea parcial)
+
         const esgRecord = this.esgAnalysisRepository.create({
           organization: org,
           analysisJson:
             result.analysis_json ||
-            result.partial_results || // si viene como "partial_results"
+            result.partial_results ||
             null,
         });
         await this.esgAnalysisRepository.save(esgRecord);
-  
-        // ✅ Determinar estado del análisis
-        const pythonStatus: string =
-          result.status?.toUpperCase() || 'FAILED'; // "COMPLETE" | "INCOMPLETE" | "FAILED"
-  
-        // Buscar el último análisis con estado PENDING
+
+        const pythonStatus =
+          result.status?.toUpperCase() || 'FAILED';
+
+        // ⭐ Buscar el último análisis PROCESSING (tu estado actual)
         const lastPending = org.analysis
-          ?.filter((a) => a.status === 'PENDING')
-          .sort(
-            (a, b) =>
-              b.createdAt.getTime() - a.createdAt.getTime(),
-          )[0];
-  
+          ?.filter((a) => a.status === 'PROCESSING')
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
         if (lastPending) {
           if (pythonStatus === 'COMPLETE') {
             lastPending.status = 'COMPLETED';
@@ -123,13 +114,23 @@ export class EsgAnalysisService {
           } else {
             lastPending.status = 'FAILED';
           }
-  
+
           await this.analysisRepository.save(lastPending);
+
           console.log(`🎯 Análisis ${lastPending.id} marcado como ${lastPending.status}`);
+
+          // ⭐⭐ WEBSOCKET ENVIADO AL FRONT
+          this.statusGateway.sendStatusUpdate({
+            analysisId: lastPending.id,
+            orgId: org.id,
+            status: lastPending.status,
+            payment_status: lastPending.payment_status,
+            shipping_status: lastPending.shipping_status,
+          });
         }
-  
-        console.log(`✅ Análisis ESG finalizado con estado: ${pythonStatus}`);
-  
+
+        console.log(`✅ Finalizado con estado: ${pythonStatus}`);
+
         return {
           id: esgRecord.id,
           filename: result.filename,
@@ -142,75 +143,78 @@ export class EsgAnalysisService {
         };
       } catch (error: any) {
         clearTimeout(hardTimeout);
-        console.error(`❌ Error en intento ${attempt}:`, error);
-  
+        console.error(`❌ Error intento ${attempt}:`, error);
+
         try {
-          // Buscar último análisis PENDING y marcarlo como FAILED
-          const pendingAnalysis = await this.analysisRepository.findOne({
+          // ❗ buscar PROCESSING (no PENDING!!)
+          const failing = await this.analysisRepository.findOne({
             where: {
               organization: { id: dto.organizationId },
-              status: 'PENDING',
+              status: 'PROCESSING',
             },
             order: { createdAt: 'DESC' },
           });
-  
-          if (pendingAnalysis) {
-            pendingAnalysis.status = 'FAILED';
-            await this.analysisRepository.save(pendingAnalysis);
-            console.warn(
-              `🚨 Análisis ${pendingAnalysis.id} de ${dto.organization_name} marcado como FAILED`,
-            );
+
+          if (failing) {
+            failing.status = 'FAILED';
+            await this.analysisRepository.save(failing);
+
+            console.warn(`🚨 ${failing.id} → FAILED`);
+
+            // ⭐ SOCKET también en el catch
+            this.statusGateway.sendStatusUpdate({
+              analysisId: failing.id,
+              orgId: dto.organizationId || "",
+              status: 'FAILED',
+              payment_status: failing.payment_status,
+              shipping_status: failing.shipping_status,
+            });
           }
         } catch (innerErr) {
-          console.error('⚠️ Error al actualizar estado del análisis a FAILED:', innerErr);
+          console.error('⚠️ Error al marcar FAILED:', innerErr);
         }
-  
+
         if (attempt < MAX_RETRIES) {
-          console.warn(`⏳ Reintentando en 1 minuto...`);
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+          console.warn('⏳ Reintentando...');
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
         } else {
           throw new HttpException('Error ejecutando análisis ESG', 500);
         }
       }
     }
-  
+
     throw new HttpException('Error inesperado en análisis ESG', 500);
   }
-  
 
   async updateAnalysisJson(id: string, json: Record<string, any>) {
     const analysis = await this.esgAnalysisRepository.findOne({ where: { id } });
-  
+
     if (!analysis) throw new NotFoundException('Análisis no encontrado');
-  
+
     analysis.analysisJson = json;
     await this.esgAnalysisRepository.save(analysis);
-  
+
     return analysis;
   }
 
-
   async getGriByTemas(temas: string[]) {
-    // 1) Obtener todos los registros para los temas recibidos
     const rows = await this.griRepo.find({
       where: { tema: In(temas) },
       order: { tema: 'ASC' },
     });
 
-    // 2) Agrupar por tema (para tabs)
-    const grouped = temas.map((t) => ({
-      tema: t,
-      contenidos: rows
-        .filter((row) => row.tema === t)
-        .map((item) => ({
-          estandar_gri: item.estandar_gri,
-          numero_contenido: item.numero_contenido,
-          contenido: item.contenido,
-          requerimiento: item.requerimiento,
-        })),
-    }));
-
-    return { gri: grouped };
+    return {
+      gri: temas.map((t) => ({
+        tema: t,
+        contenidos: rows
+          .filter((row) => row.tema === t)
+          .map((item) => ({
+            estandar_gri: item.estandar_gri,
+            numero_contenido: item.numero_contenido,
+            contenido: item.contenido,
+            requerimiento: item.requerimiento,
+          })),
+      })),
+    };
   }
-  
 }

@@ -77,13 +77,6 @@ export class OrganizationsService {
         relations: ['analysis'],
       })
 
-      //await this.esgAnalysisService.runPythonEsgAnalysis({
-      //  organizationId: org.id,
-      //  organization_name: org.company,
-      //  country: org.country,
-      //  website: org.website
-      //})
-  
       // Sólo exponemos el claimToken cuando NO hay owner
       return {
         ...created,
@@ -195,4 +188,36 @@ export class OrganizationsService {
       throw error;
     }
   }
+
+async claimOrganization( userId: string, orgId: string, claimToken: string) {
+  const org = await this.organizationRepository.findOne({
+    where: { id: orgId, claimToken },
+    relations: ['owner'],
+  })
+
+  if (!org) {
+    throw new NotFoundException('Organización no encontrada o ya reclamada')
+  }
+
+  // Validar expiración
+  if (org.claimExpiresAt && org.claimExpiresAt < new Date()) {
+    throw new BadRequestException('El enlace de reclamación ha expirado')
+  }
+
+  const user = await this.userRepository.findOne({ where: { id: userId } })
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado')
+  }
+
+  // 👉 Aquí se hace la “magia”
+  org.owner = user
+  org.claimedAt = new Date()
+  org.claimToken = null
+  org.claimExpiresAt = null
+
+  await this.organizationRepository.save(org)
+
+  return org
+}
+
 }

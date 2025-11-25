@@ -12,6 +12,7 @@ import { EsgJobsController } from './esg_jobs.controller';
 import { Organization } from 'src/organizations/entities/organization.entity';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
+import { AnalysisStatusGateway } from './analysis-status.gateway';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { GriContent } from './entities/gri_contents.entity';
   providers: [
     EsgAnalysisService,
     EsgJobsService,
-    EsgJobProcessor, // 👈 los processors también van como providers
+    EsgJobProcessor,
+    AnalysisStatusGateway
   ],
   controllers: [
     EsgAnalysisController,
