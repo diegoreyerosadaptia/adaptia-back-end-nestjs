@@ -13,14 +13,15 @@ import {
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { EsgAnalysis } from 'src/esg_analysis/entities/esg_analysis.entity';
 
-  export const EMPLYEES_NUMBER = [
-    '1-9',
-    '10-99',
-    '100-499',
-    '500-1000',
-    '1000-4999',
-    '5000-10000',
-    '+10000',] as const;
+export const EMPLYEES_NUMBER = [
+  '1-9',
+  '10-99',
+  '100-499',
+  '500-999',
+  '1000-4999',    
+  '5000-9999',
+  '+10000'
+] as const
 export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
   
   @Entity({ name: 'organzations' })
