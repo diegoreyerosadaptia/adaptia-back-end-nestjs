@@ -33,11 +33,11 @@ export class EsgJobsService {
     }
 
     // 2️⃣ Cambiar el estado del análisis a "PENDING"
-    lastAnalysis.status = 'PENDING';
+    lastAnalysis.status = 'PROCESSING';
     lastAnalysis.updatedAt = new Date();
 
     await this.analysisRepo.save(lastAnalysis);
-    console.log(`📊 Análisis ${lastAnalysis.id} marcado como PENDING`);
+    console.log(`📊 Análisis ${lastAnalysis.id} marcado como PROCESSING`);
 
     // 3️⃣ Encolar el job, pasando el ID del análisis
     const job = await this.esgQueue.add(
@@ -56,7 +56,7 @@ export class EsgJobsService {
     return {
       jobId: job.id,
       analysisId: lastAnalysis.id,
-      status: 'PENDING',
+      status: 'PROCESSING',
     };
   }
 
