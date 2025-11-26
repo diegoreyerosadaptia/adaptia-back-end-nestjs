@@ -16,7 +16,7 @@ import {
   @WebSocketGateway({
     namespace: '/analysis-status',
     cors: {
-      origin: [process.env.ALLOWED_ORIGINS].filter(Boolean),
+      origin: ['http://localhost:3000', process.env.ALLOWED_ORIGINS].filter(Boolean),
       credentials: true,
     },
   })
