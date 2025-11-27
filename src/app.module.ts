@@ -10,6 +10,7 @@ import { EsgAnalysisModule } from './esg_analysis/esg_analysis.module';
 import { BullModule } from '@nestjs/bull';
 import { PaymentsModule } from './payments/payments.module';
 import { PaymentsMethodsModule } from './payments/payments-methods/payments-methods.module';
+import { CuponesModule } from './cupones/cupones.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { PaymentsMethodsModule } from './payments/payments-methods/payments-meth
     EsgAnalysisModule,
     PaymentsModule,
     PaymentsMethodsModule,
+    CuponesModule,
   ],
   controllers: [],
   providers: [],

@@ -61,61 +61,105 @@ export class MercadopagoService {
   }
   
 
-  // 💳 Crear preferencia de pago
-  async createPreference(user: User, organization: Organization) {
-    try {
-      const employeeRange = organization.employees_number as typeof EMPLYEES_NUMBER[number];
-      const price = this.getPriceByEmployeeRange(employeeRange);
+// 💳 Crear preferencia de pago
+async createPreference(user: User, organization: Organization) {
+  try {
+    const employeeRange = organization.employees_number as typeof EMPLYEES_NUMBER[number];
 
-      const title = `Plan Adaptia - ${organization.company}`;
-      const description = `Análisis ESG para empresa (${employeeRange} empleados)`;
+    // 1️⃣ Precio base según rango de empleados
+    const basePrice = this.getPriceByEmployeeRange(employeeRange);
 
-      const preferenceBody: PreferenceCreateData['body'] = {
-        metadata: {
-          user_id: user.id,
-          organization_id: organization.id,
-          employee_range: employeeRange,
-        },
-        items: [
-          {
-            id: organization.id,
-            title,
-            description,
-            unit_price: price,
-            quantity: 1,
-            currency_id: 'USD',
-          },
-        ],
-        payer: {
-          name: user.firstName,
-          surname: user.lastName,
-          email: user.email,
-        },
-        back_urls: {
-          success: this.configService.getOrThrow('FRONTEND_URL_SUCCESS_PAYMENT'),
-          failure: this.configService.getOrThrow('FRONTEND_URL_FAILURE_PAYMENT'),
-          pending: this.configService.getOrThrow('FRONTEND_URL_PENDING_PAYMENT'),
-        },
-        notification_url: `${this.configService.getOrThrow('HOST_URL')}/mercadopago/webhook`,
-        auto_return: 'all',
-        operation_type: 'regular_payment',
-      };
+    // 2️⃣ Buscar el análisis pendiente de esa organización
+    const analysis = await this.analysisRepository.findOne({
+      where: {
+        organization: { id: organization.id },
+        payment_status: 'PENDING',
+      },
+      order: { createdAt: 'DESC' }, // por si hubiera más de uno pendiente
+    });
 
-      const preference = new Preference(this.mercadopagoClient);
-      const result = await preference.create({ body: preferenceBody });
-
-      return {
-        id: result.id,
-        init_point: result.init_point,
-        sandbox: result.sandbox_init_point,
-        price,
-      };
-    } catch (error) {
-      this.logger.error(error.message, error.stack);
-      throw error;
+    if (!analysis) {
+      this.logger.warn(
+        `No se encontró análisis pendiente para organization ${organization.id}, usando precio sin descuento`,
+      );
     }
+
+    // 3️⃣ Tomar descuento directamente de analysis.discount_percentage (decimal -> string)
+    const discountPercentage = analysis?.discount_percentage
+      ? Number(analysis.discount_percentage)
+      : 0;
+
+    // 4️⃣ Calcular precio final
+    let finalPrice = basePrice;
+    let discountAmount = 0;
+
+    if (discountPercentage > 0) {
+      discountAmount = (basePrice * discountPercentage) / 100;
+      finalPrice = Number((basePrice - discountAmount).toFixed(2));
+
+      this.logger.log(
+        `Aplicando descuento de ${discountPercentage}% a org ${organization.id}. ` +
+        `Base: ${basePrice}, Descuento: ${discountAmount}, Final: ${finalPrice}`,
+      );
+    }
+
+    const title = `Plan Adaptia - ${organization.company}`;
+    const description = `Análisis ESG para empresa (${employeeRange} empleados)`;
+
+    const preferenceBody: PreferenceCreateData['body'] = {
+      metadata: {
+        user_id: user.id,
+        organization_id: organization.id,
+        employee_range: employeeRange,
+        base_price: basePrice,
+        discount_percentage: discountPercentage,
+        discount_amount: discountAmount,
+        final_price: finalPrice,
+        analysis_id: analysis?.id ?? null,
+      },
+      items: [
+        {
+          id: organization.id,
+          title,
+          description,
+          unit_price: finalPrice,
+          quantity: 1,
+          currency_id: 'USD',
+        },
+      ],
+      payer: {
+        name: user.firstName,
+        surname: user.lastName,
+        email: user.email,
+      },
+      back_urls: {
+        success: this.configService.getOrThrow('FRONTEND_URL_SUCCESS_PAYMENT'),
+        failure: this.configService.getOrThrow('FRONTEND_URL_FAILURE_PAYMENT'),
+        pending: this.configService.getOrThrow('FRONTEND_URL_PENDING_PAYMENT'),
+      },
+      notification_url: `${this.configService.getOrThrow('HOST_URL')}/mercadopago/webhook`,
+      auto_return: 'all',
+      operation_type: 'regular_payment',
+    };
+
+    const preference = new Preference(this.mercadopagoClient);
+    const result = await preference.create({ body: preferenceBody });
+
+    return {
+      id: result.id,
+      init_point: result.init_point,
+      sandbox: result.sandbox_init_point,
+      basePrice,
+      discountPercentage,
+      discountAmount,
+      finalPrice,
+    };
+  } catch (error) {
+    this.logger.error(error.message, error.stack);
+    throw error;
   }
-  
+}
+
 
   async getPaymentDetails(paymentId: string) {
     const queryRunner = this.dataSource.createQueryRunner();

@@ -15,6 +15,7 @@ import { randomUUID } from 'crypto'
 import { addHours } from 'date-fns'
 import { User } from 'src/users/entities/user.entity';
 import { EsgAnalysisService } from 'src/esg_analysis/esg_analysis.service';
+import { Coupon } from 'src/cupones/entities/cupone.entity';
 
 @Injectable()
 export class OrganizationsService {
@@ -27,6 +28,8 @@ export class OrganizationsService {
     private readonly analysisRepository: Repository<Analysis>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Coupon)
+    private readonly couponRepository: Repository<Coupon>,
     private readonly esgAnalysisService : EsgAnalysisService,
   ) {}
 
@@ -39,7 +42,7 @@ export class OrganizationsService {
       const claimToken = isAnonymous ? randomUUID() : null
       const claimExpiresAt = isAnonymous ? addHours(new Date(), 48) : null
   
-      // Sólo buscamos el usuario si vino ownerId
+      // ...
       let owner: User | null = null
       if (!isAnonymous) {
         owner = await this.userRepository.findOne({
@@ -49,39 +52,86 @@ export class OrganizationsService {
           throw new NotFoundException('user not found')
         }
       }
-  
-      // Creamos la organización:
-      // - si hay owner => la relacionamos normal
-      // - si no hay owner => seteamos claimToken/claimExpiresAt/claimedAt
+
+      // ===========================
+      // 2) Descuento por nuevas organizaciones
+      //    - 1ra org: sin descuento
+      //    - 2da org: 10%
+      //    - 3ra org: 20%
+      //    - 4ta org: 30% ...
+      // ===========================
+      let couponToApply: Coupon | null = null
+      let discountPercentage: number | null = null
+
+      if (owner) {
+        const existingOrgsCount = await this.organizationRepository.count({
+          where: { owner: { id: owner.id } },
+        })
+
+        const orgNumber = existingOrgsCount + 1 // esta nueva
+
+        if (orgNumber >= 2) {
+          // 1️⃣ buscamos SIEMPRE el cupón base de 10%
+          const baseCoupon = await this.couponRepository.findOne({
+            where: { percentage: 10 }, // debe existir en BD
+          })
+
+          if (!baseCoupon) {
+            this.logger.warn(`No se encontró cupón base 10% para user ${owner.id}`)
+          } else {
+            couponToApply = baseCoupon
+
+            // 2️⃣ porcentaje final = 10% * (orgNumber - 1)
+            // 2da org => 10 * 1 = 10
+            // 3ra org => 10 * 2 = 20
+            // 4ta org => 10 * 3 = 30
+            discountPercentage = Number(baseCoupon.percentage) * (orgNumber - 1)
+          }
+        }
+      }
+
+      // ===========================
+      // 3) Crear organización
+      // ===========================
       const org = this.organizationRepository.create({
         ...createOrganizationDto,
-        ...(owner ? { owner } : {}), // relaciona con el user existente
+        ...(owner ? { owner } : {}),
         ...(isAnonymous
           ? { claimToken, claimExpiresAt, claimedAt: null }
-          : {}), // sólo campos de claim si es anónima
+          : {}),
       })
-  
+
       await this.organizationRepository.save(org)
-  
-      // Crear análisis asociado automáticamente
+
+      // ===========================
+      // 4) Crear análisis asociado
+      //    (con cupón + porcentaje multiplicado)
+      // ===========================
       const analysis = this.analysisRepository.create({
-        organization: org, // si tu Analysis usa FK directa, ajustá a organization_id
+        organization: org,
         status: 'PENDING',
         payment_status: 'PENDING',
+        ...(couponToApply ? { coupon: couponToApply } : {}),
+        ...(discountPercentage != null
+          ? { discount_percentage: discountPercentage.toFixed(2) }
+          : {}),
       })
+
       await this.analysisRepository.save(analysis)
-  
-      // Devolver la organización con analysis
+
+      // ===========================
+      // 5) Devolver la organización con analysis
+      // ===========================
       const created = await this.organizationRepository.findOne({
         where: { id: org.id },
         relations: ['analysis'],
       })
 
-      // Sólo exponemos el claimToken cuando NO hay owner
       return {
         ...created,
         ...(isAnonymous ? { claimToken } : {}),
       }
+
     } catch (error) {
       this.logger.error(error.message, error.stack)
       throw error

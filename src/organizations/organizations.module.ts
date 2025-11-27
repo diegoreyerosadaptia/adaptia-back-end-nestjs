@@ -6,9 +6,10 @@ import { Organization } from './entities/organization.entity';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { User } from 'src/users/entities/user.entity';
 import { EsgAnalysisModule } from 'src/esg_analysis/esg_analysis.module';
+import { Coupon } from 'src/cupones/entities/cupone.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organization, Analysis, User, Analysis]), EsgAnalysisModule],
+  imports: [TypeOrmModule.forFeature([Organization, Analysis, User, Analysis, Coupon]), EsgAnalysisModule],
   controllers: [OrganizationsController],
   providers: [OrganizationsService],
 })
