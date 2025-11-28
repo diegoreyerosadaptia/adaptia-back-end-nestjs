@@ -12,3 +12,4 @@ import { Analysis } from 'src/analysis/entities/analysis.entity';
   controllers: [CuponesController]
 })
 export class CuponesModule {}
+
