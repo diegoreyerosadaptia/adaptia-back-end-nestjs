@@ -15,6 +15,7 @@ import { PaymentsMethodsService } from '../payments-methods/payments-methods.ser
 import { PaymentMethod } from '../payments-methods/entities/payments-method.entity';
 import { EsgJobsService } from 'src/esg_analysis/esg_job.service';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
+import { MailService } from 'src/analysis/mail.service';
 
 @Injectable()
 export class MercadopagoService {
@@ -46,7 +47,8 @@ export class MercadopagoService {
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
     private readonly paymentsMethodsService: PaymentsMethodsService,
-    private readonly jobsService: EsgJobsService
+    private readonly jobsService: EsgJobsService,
+    private readonly mailService: MailService,
   ) {
     this.mercadopagoClient = new MercadoPagoConfig({
       accessToken: this.configService.getOrThrow<string>(
@@ -327,7 +329,7 @@ const paymentDetails = await paymentService.get({ id: paymentId });
       `);
       const org = await this.organizationRepository.findOne({
         where: { id: orgId },
-        relations: ['analysis'],
+        relations: ['analysis', 'owner'],
       });
     
       if (!org) {
@@ -359,6 +361,22 @@ const paymentDetails = await paymentService.get({ id: paymentId });
       });
     
       console.log(`✅ Estado de pago actualizado a COMPLETED para el análisis ${lastAnalysis.id}`);
+
+      const recipientEmail =
+      org.email || org.owner?.email
+      
+      if (recipientEmail) {
+        await this.mailService.sendPaymentConfirmationEmail({
+          to: recipientEmail,
+          organizationName: org.company ?? org.owner?.firstName ?? 'tu organización',
+          amount: paymentDetails?.transaction_amount, // según lo que devuelva MP
+          planName: paymentDetails?.description, // o el nombre de tu plan
+        })
+      } else {
+        this.logger.warn(
+          `No se encontró email de contacto para la organización ${org.id} al confirmar pago`,
+        )
+      }
       
     } catch (error) {
       this.logger.error(`Error processing approved payment: ${error.message}`, {

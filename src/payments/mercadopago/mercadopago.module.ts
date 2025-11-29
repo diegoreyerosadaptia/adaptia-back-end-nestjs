@@ -8,12 +8,13 @@ import { PaymentsMethodsModule } from '../payments-methods/payments-methods.modu
 import { PaymentMethod } from '../payments-methods/entities/payments-method.entity';
 import { EsgAnalysisModule } from 'src/esg_analysis/esg_analysis.module';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
+import { AnalysisModule } from 'src/analysis/analysis.module';
 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Organization, PaymentMethod, Organization, Analysis])
-    , PaymentsMethodsModule, EsgAnalysisModule
+    , PaymentsMethodsModule, EsgAnalysisModule, AnalysisModule
   ],
   controllers: [MercadoPagoController],
   providers: [MercadopagoService],

@@ -52,6 +52,7 @@ import { CuponesModule } from './cupones/cupones.module';
       isGlobal: true,
       cache: true,
       load: [AppConfig, DatabaseConfig],
+      envFilePath: '.env',
     }),
 
     // 🗄️ Base de datos

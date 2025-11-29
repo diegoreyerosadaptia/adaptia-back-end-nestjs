@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { AnalysisService } from './analysis.service';
 import { CreateAnalysisDto } from './dto/create-analysis.dto';
 import { UpdateAnalysisDto } from './dto/update-analysis.dto';
+import { SendAnalysisDto } from './dto/send-analysis.dto';
 
 @Controller('analysis')
 export class AnalysisController {
@@ -36,9 +37,13 @@ export class AnalysisController {
   updatePaymentStatus(@Param('id') id: string) {
     return this.analysisService.updatePaymentStatus(id);
   }
+// analysis.controller.ts (ejemplo)
+@Patch('sendAnalysis/:id')
+sendAnalysis(
+  @Param('id') id: string,
+  @Body('chartImgBase64') chartImgBase64?: string,
+) {
+  return this.analysisService.sendAnalysisUser(id, chartImgBase64)
+}
 
-  @Patch('sendAnalysis/:id')
-  sendAnalysisUser(@Param('id') id: string) {
-    return this.analysisService.sendAnalysisUser(id);
-  }
 }

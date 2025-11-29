@@ -4,6 +4,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { setGlobalDispatcher, Agent } from 'undici';
 import Redis from 'ioredis';
+import { json, urlencoded } from 'express'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -33,6 +34,9 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  app.use(json({ limit: '2mb' }))
+  app.use(urlencoded({ extended: true, limit: '2mb' }))
 
   // 🧩 Test de conexión Redis (solo log)
   const redisUrl = process.env.REDIS_URL;
