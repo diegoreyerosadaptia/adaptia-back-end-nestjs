@@ -118,7 +118,7 @@ export class MailService {
     const { to, organizationName, amount, planName } = params
 
     const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+      this.configService.get<string>('ALLOWED_ORIGINS') || 'http://localhost:3000'
 
     const dashboardUrl = `${frontendUrl}/dashboard`
 
