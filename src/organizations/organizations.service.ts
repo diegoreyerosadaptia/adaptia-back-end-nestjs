@@ -38,11 +38,9 @@ export class OrganizationsService {
     try {
       const isAnonymous = !createOrganizationDto.ownerId
   
-      // Sólo generamos campos de claim cuando NO hay ownerId (usuario aún no existe)
       const claimToken = isAnonymous ? randomUUID() : null
       const claimExpiresAt = isAnonymous ? addHours(new Date(), 48) : null
   
-      // ...
       let owner: User | null = null
       if (!isAnonymous) {
         owner = await this.userRepository.findOne({
@@ -52,44 +50,26 @@ export class OrganizationsService {
           throw new NotFoundException('user not found')
         }
       }
-
+  
       // ===========================
       // 2) Descuento por nuevas organizaciones
       //    - 1ra org: sin descuento
-      //    - 2da org: 10%
-      //    - 3ra org: 20%
-      //    - 4ta org: 30% ...
+      //    - 2da org en adelante: siempre 10%
       // ===========================
       let couponToApply: Coupon | null = null
       let discountPercentage: number | null = null
-
+  
       if (owner) {
         const existingOrgsCount = await this.organizationRepository.count({
           where: { owner: { id: owner.id } },
         })
-
-        const orgNumber = existingOrgsCount + 1 // esta nueva
-
-        if (orgNumber >= 2) {
-          // 1️⃣ buscamos SIEMPRE el cupón base de 10%
-          const baseCoupon = await this.couponRepository.findOne({
-            where: { percentage: 10 }, // debe existir en BD
-          })
-
-          if (!baseCoupon) {
-            this.logger.warn(`No se encontró cupón base 10% para user ${owner.id}`)
-          } else {
-            couponToApply = baseCoupon
-
-            // 2️⃣ porcentaje final = 10% * (orgNumber - 1)
-            // 2da org => 10 * 1 = 10
-            // 3ra org => 10 * 2 = 20
-            // 4ta org => 10 * 3 = 30
-            discountPercentage = Number(baseCoupon.percentage) * (orgNumber - 1)
+  
+        // Si ya tiene al menos 1 organización → 10% fijo
+        if (existingOrgsCount >= 1) {
+            discountPercentage = Number(10) // siempre 10
           }
         }
-      }
-
+  
       // ===========================
       // 3) Crear organización
       // ===========================
@@ -100,12 +80,12 @@ export class OrganizationsService {
           ? { claimToken, claimExpiresAt, claimedAt: null }
           : {}),
       })
-
+  
       await this.organizationRepository.save(org)
-
+  
       // ===========================
       // 4) Crear análisis asociado
-      //    (con cupón + porcentaje multiplicado)
+      //    (con cupón + porcentaje fijo 10% si aplica)
       // ===========================
       const analysis = this.analysisRepository.create({
         organization: org,
@@ -116,9 +96,9 @@ export class OrganizationsService {
           ? { discount_percentage: discountPercentage.toFixed(2) }
           : {}),
       })
-
+  
       await this.analysisRepository.save(analysis)
-
+  
       // ===========================
       // 5) Devolver la organización con analysis
       // ===========================
@@ -126,19 +106,18 @@ export class OrganizationsService {
         where: { id: org.id },
         relations: ['analysis'],
       })
-
+  
       return {
         ...created,
         ...(isAnonymous ? { claimToken } : {}),
       }
-
     } catch (error) {
       this.logger.error(error.message, error.stack)
       throw error
     }
   }
-  
 
+  
   async findAll(userId: string) {
     try {
       // 1️⃣ Buscar el usuario para saber su rol
@@ -268,6 +247,51 @@ async claimOrganization( userId: string, orgId: string, claimToken: string) {
   await this.organizationRepository.save(org)
 
   return org
+}
+
+async applyCoupon(analysisId: string, coupon: string) {
+  try {
+    console.log(coupon)
+    const analysis = await this.analysisRepository.findOne({
+      where: { id: analysisId },
+      relations: ['coupon'],
+    })
+
+    if (!analysis) {
+      throw new NotFoundException('analysis not found')
+    }
+
+    const baseCoupon = await this.couponRepository.findOne({
+      where: { name: coupon },
+    })
+
+    if (!baseCoupon) {
+      throw new NotFoundException('coupon not found')
+    }
+
+    // 💡 asegurar que trabajamos con número
+    const percentageNumber = Number(baseCoupon.percentage)
+
+    analysis.coupon = baseCoupon
+    analysis.discount_percentage = percentageNumber.toFixed(2) // ← string
+
+    await this.analysisRepository.save(analysis)
+
+    return {
+      analysisId: analysis.id,
+      coupon: {
+        id: baseCoupon.id,
+        name: baseCoupon.name,
+        percentage: percentageNumber,
+      },
+      discount_percentage: percentageNumber,
+    }
+  } catch (error) {
+    if (!(error instanceof NotFoundException)) {
+      this.logger.error(error.message, error.stack)
+    }
+    throw error
+  }
 }
 
 }

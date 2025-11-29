@@ -13,6 +13,12 @@ export class OrganizationsController {
     return this.organizationsService.create(createOrganizationDto);
   }
 
+  @Post('apply-coupon/:id')
+  applyCoupon(@Param('id') id: string, @Body('couponName') couponName: string,) {
+    return this.organizationsService.applyCoupon(id, couponName);
+  }
+
+
   @Get()
   @UseGuards(SupabaseAuthGuard)
   findAll(@Req() req) {
