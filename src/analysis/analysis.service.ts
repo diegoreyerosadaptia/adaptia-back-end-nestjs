@@ -198,7 +198,7 @@ async sendAnalysisUser(id: string, chartImgBase64?: string) {
       await this.mailService.sendAnalysisEmail({
         to: recipientEmail,
         organizationName: org.company ?? org.name ?? 'tu organización',
-        analysisId: esgAnalysis.id,
+        analysisId: org.id,
         attachment: {
           filename: `Resumen_Ejecutivo_Adaptia_${contextoData?.nombre_empresa ?? 'Empresa'}.pdf`,
           content: pdfBase64,
