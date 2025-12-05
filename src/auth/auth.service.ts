@@ -14,6 +14,7 @@ import { CreateVerificationTokenDto } from './dto/create-verification-token.dto'
 import { VerificationToken } from './entities/verification-token.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { SupabaseAuthService } from './superbase-auth.service';
+import { UpdatePasswordDto } from 'src/users/dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -254,4 +255,35 @@ export class AuthService {
       throw error;
     }
   }
+
+    // ✅ NUEVO: cambio de contraseña usando Supabase
+    async changePassword(userId: string, dto: UpdatePasswordDto) {
+      try {
+        // Opcional: validar que exista en tu DB local si querés mantener consistencia
+        const localUser = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+  
+        if (!localUser) {
+          throw new NotFoundException('User not found in local DB');
+        }
+  
+        const updatedUser = await this.supabaseAuthService.updatePassword(
+          userId,
+          dto,
+          localUser.email, // si lo tenés guardado localmente
+        );
+  
+        return {
+          message: '✅ Contraseña actualizada correctamente',
+          user: {
+            ...localUser,
+            email: updatedUser.email,
+          },
+        };
+      } catch (error) {
+        this.logger.error(error.message, error.stack);
+        throw error;
+      }
+    }
 }

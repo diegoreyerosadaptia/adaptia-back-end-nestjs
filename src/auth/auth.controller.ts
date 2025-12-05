@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user';
 import { CreatePasswordResetTokenDto } from './dto/create-password-reset-token.dto';
 import { CreateVerificationTokenDto } from './dto/create-verification-token.dto';
+import { UpdatePasswordDto } from 'src/users/dto/update-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -77,5 +79,12 @@ export class AuthController {
   @Delete('verification-token/:id')
   async deleteVerificationToken(@Param('id') id: string) {
     return this.authService.deleteVerificationToken(id);
+  }
+
+  @Patch(':id/password')
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() updatePasswordDto: UpdatePasswordDto) {
+    return this.authService.changePassword(id, updatePasswordDto);
   }
 }
