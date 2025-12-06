@@ -41,9 +41,8 @@ export class AnalysisController {
 @Patch('sendAnalysis/:id')
 sendAnalysis(
   @Param('id') id: string,
-  @Body('chartImgBase64') chartImgBase64?: string,
 ) {
-  return this.analysisService.sendAnalysisUser(id, chartImgBase64)
+  return this.analysisService.sendAnalysisUser(id)
 }
 
 }

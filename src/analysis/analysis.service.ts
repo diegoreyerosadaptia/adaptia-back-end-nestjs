@@ -145,7 +145,7 @@ export class AnalysisService {
   }
   
 // analysis.service.ts
-async sendAnalysisUser(id: string, chartImgBase64?: string) {
+async sendAnalysisUser(id: string) {
   try {
     const analysis = await this.analysisRepository.findOne({
       where: { id },
@@ -159,57 +159,6 @@ async sendAnalysisUser(id: string, chartImgBase64?: string) {
     const org = analysis.organization
     const recipientEmail = org.email || org.owner?.email
 
-    const esgAnalysis = await this.esgAnalysisRepository.findOne({
-      where: { organization: { id: org.id } },
-      order: { createdAt: 'DESC' },
-    })
-
-    if (!esgAnalysis) {
-      throw new NotFoundException(
-        `No se encontró ESGAnalysis para la organización ${org.id}`,
-      )
-    }
-
-    const analysisData =
-      typeof (esgAnalysis as any).analysisJson === 'string'
-        ? JSON.parse((esgAnalysis as any).analysisJson)
-        : (esgAnalysis as any).analysisJson
-
-    const contextoData =
-      analysisData?.find((a: any) => a?.response_content?.nombre_empresa)
-        ?.response_content || {}
-
-    const resumenData =
-      analysisData?.find((a: any) => a?.response_content?.parrafo_1)
-        ?.response_content || {}
-
-    // 👇 aquí usamos el chartImgBase64
-    const pdfBytes = await generateEsgPdfNode({
-      contexto: contextoData,
-      resumen: resumenData,
-      portadaPath: 'Portada-Resumen-Ejecutivo-Adaptia.png',
-      contraportadaPath: 'Contra-Portada-Resumen-Ejecutivo-Adaptia.png',
-      chartImgBase64,   // <── importante
-    })
-
-    const pdfBase64 = Buffer.from(pdfBytes).toString('base64')
-
-    if (recipientEmail) {
-      await this.mailService.sendAnalysisEmail({
-        to: recipientEmail,
-        organizationName: org.company ?? org.name ?? 'tu organización',
-        analysisId: org.id,
-        attachment: {
-          filename: `Resumen_Ejecutivo_Adaptia_${contextoData?.nombre_empresa ?? 'Empresa'}.pdf`,
-          content: pdfBase64,
-          contentType: 'application/pdf',
-        },
-      })
-    } else {
-      this.logger.warn(
-        `No se encontró email de contacto para el análisis ${analysis.id} (org ${org?.id})`,
-      )
-    }
 
     analysis.shipping_status = 'SENT'
     await this.analysisRepository.save(analysis)

@@ -16,6 +16,7 @@ import { addHours } from 'date-fns'
 import { User } from 'src/users/entities/user.entity';
 import { EsgAnalysisService } from 'src/esg_analysis/esg_analysis.service';
 import { Coupon } from 'src/cupones/entities/cupone.entity';
+import { MailService } from 'src/analysis/mail.service';
 
 @Injectable()
 export class OrganizationsService {
@@ -31,16 +32,17 @@ export class OrganizationsService {
     @InjectRepository(Coupon)
     private readonly couponRepository: Repository<Coupon>,
     private readonly esgAnalysisService : EsgAnalysisService,
+    private readonly mailService: MailService,
   ) {}
 
   
   async create(createOrganizationDto: CreateOrganizationDto) {
     try {
       const isAnonymous = !createOrganizationDto.ownerId
-  
+
       const claimToken = isAnonymous ? randomUUID() : null
       const claimExpiresAt = isAnonymous ? addHours(new Date(), 48) : null
-  
+
       let owner: User | null = null
       if (!isAnonymous) {
         owner = await this.userRepository.findOne({
@@ -50,26 +52,23 @@ export class OrganizationsService {
           throw new NotFoundException('user not found')
         }
       }
-  
+
       // ===========================
       // 2) Descuento por nuevas organizaciones
-      //    - 1ra org: sin descuento
-      //    - 2da org en adelante: siempre 10%
       // ===========================
       let couponToApply: Coupon | null = null
       let discountPercentage: number | null = null
-  
+
       if (owner) {
         const existingOrgsCount = await this.organizationRepository.count({
           where: { owner: { id: owner.id } },
         })
-  
-        // Si ya tiene al menos 1 organización → 10% fijo
+
         if (existingOrgsCount >= 1) {
-            discountPercentage = Number(10) // siempre 10
-          }
+          discountPercentage = Number(10)
         }
-  
+      }
+
       // ===========================
       // 3) Crear organización
       // ===========================
@@ -80,12 +79,28 @@ export class OrganizationsService {
           ? { claimToken, claimExpiresAt, claimedAt: null }
           : {}),
       })
-  
+
       await this.organizationRepository.save(org)
-  
+
+      // ✅ ===========================
+      // 3.1) Notificar a Diego
+      // ===========================
+      // No bloquees el flujo si el mail falla:
+      this.mailService
+        .sendOrganizationCreatedNotification({
+          organizationName:
+            org.company || org.name || createOrganizationDto.company || "Organización sin nombre",
+          ownerEmail:
+            owner?.email || (createOrganizationDto as any)?.email,
+        })
+        .catch((err) => {
+          this.logger.warn(
+            `No se pudo enviar mail de org creada: ${err?.message ?? err}`,
+          )
+        })
+
       // ===========================
       // 4) Crear análisis asociado
-      //    (con cupón + porcentaje fijo 10% si aplica)
       // ===========================
       const analysis = this.analysisRepository.create({
         organization: org,
@@ -96,9 +111,9 @@ export class OrganizationsService {
           ? { discount_percentage: discountPercentage.toFixed(2) }
           : {}),
       })
-  
+
       await this.analysisRepository.save(analysis)
-  
+
       // ===========================
       // 5) Devolver la organización con analysis
       // ===========================
@@ -106,7 +121,7 @@ export class OrganizationsService {
         where: { id: org.id },
         relations: ['analysis'],
       })
-  
+
       return {
         ...created,
         ...(isAnonymous ? { claimToken } : {}),
@@ -115,6 +130,7 @@ export class OrganizationsService {
       this.logger.error(error.message, error.stack)
       throw error
     }
+
   }
 
   

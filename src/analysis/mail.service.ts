@@ -126,7 +126,7 @@ export class MailService {
       typeof amount === 'number'
         ? amount.toLocaleString('es-AR', {
             style: 'currency',
-            currency: 'USD', // o ARS según tu flujo
+            currency: 'CLP', // o ARS según tu flujo
           })
         : null
 
@@ -204,5 +204,69 @@ export class MailService {
       )
     }
   }
+
+  async sendOrganizationCreatedNotification(params: {
+    organizationName: string
+    ownerEmail?: string
+  }) {
+    const { organizationName, ownerEmail } = params
+
+    const subject = `Nueva organización creada: ${organizationName}`
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+  <body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 40px;">
+    <div style="max-width: 520px; margin: auto; background: #ffffff; padding: 32px; border-radius: 12px; border: 1px solid #e5e7eb;">
+      
+      <h2 style="color: #163F6A; margin-top: 0; font-size: 22px;">
+        Se creó una nueva organización en Adaptia
+      </h2>
+
+      <p style="font-size: 16px; color: #374151; line-height: 1.5;">
+        Se registró una nueva organización:
+      </p>
+
+      <div style="padding: 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <p style="margin: 0; font-size: 15px; color: #111827;">
+          <strong>Organización:</strong> ${organizationName}
+        </p>
+        ${
+          ownerEmail
+            ? `<p style="margin: 8px 0 0; font-size: 15px; color: #111827;">
+                 <strong>Email asociado:</strong> ${ownerEmail}
+               </p>`
+            : ""
+        }
+      </div>
+
+      <p style="font-size: 14px; color: #4B5563; margin-top: 24px;">
+        Este correo es una notificación automática.
+      </p>
+
+    </div>
+  </body>
+</html>
+    `
+
+    try {
+      await this.resend.emails.send({
+        from: this.from,
+        to: ["diego@adaptianow.com"],
+        subject,
+        html,
+      })
+
+      this.logger.log(
+        `Notificación de organización creada enviada a diego@adaptianow.com (${organizationName})`,
+      )
+    } catch (err: any) {
+      this.logger.error(
+        `Error enviando notificación de org creada a diego@adaptianow.com: ${err.message}`,
+        err.stack,
+      )
+    }
+  }
+
   
 }
