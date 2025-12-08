@@ -8,6 +8,7 @@ import { EsgAnalysisResult } from 'src/types/esg-analysis-result.type';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
 import { AnalysisStatusGateway } from './analysis-status.gateway';
+import { SasbListContent } from './entities/sasb_list_contents.entity';
 
 @Injectable()
 export class EsgAnalysisService {
@@ -20,6 +21,8 @@ export class EsgAnalysisService {
     private readonly analysisRepository: Repository<Analysis>,
     @InjectRepository(GriContent)
     private readonly griRepo: Repository<GriContent>,
+    @InjectRepository(SasbListContent)
+    private readonly sasbRepo: Repository<SasbListContent>,
     private readonly statusGateway: AnalysisStatusGateway, // ⭐ agregado
   ) {}
 
@@ -217,4 +220,98 @@ export class EsgAnalysisService {
       })),
     };
   }
+
+  async getSasb(industria: string, esgAnalysisId: string) {
+    // 1) Buscar análisis
+    const analysis = await this.esgAnalysisRepository.findOne({
+      where: { id: esgAnalysisId },
+    })
+  
+    if (!analysis) {
+      throw new NotFoundException("ESG analysis not found")
+    }
+  
+    const analysisJsonRaw = (analysis as any).analysisJson
+  
+    if (!analysisJsonRaw) {
+      throw new NotFoundException("Analysis JSON not found on analysis record")
+    }
+  
+    // 2) Normalizar a array (clon profundo)
+    const analysisArray = Array.isArray(analysisJsonRaw)
+      ? JSON.parse(JSON.stringify(analysisJsonRaw))
+      : JSON.parse(JSON.stringify(analysisJsonRaw))
+  
+    // 3) Traer SASB desde BD para la industria seleccionada
+    const rows = await this.sasbRepo.find({
+      where: { industria },
+      order: { tema: "ASC" },
+    })
+  
+    /* ============================
+       ✅ PROMPT 8 - reemplazar y deduplicar
+    ============================= */
+    const p8Indexes: number[] = []
+    analysisArray.forEach((a: any, idx: number) => {
+      if (typeof a?.name === "string" && a.name.includes("Prompt 8")) {
+        p8Indexes.push(idx)
+      }
+    })
+  
+    if (p8Indexes.length > 0) {
+      const keepIdx = p8Indexes[0]
+      const p8 = analysisArray[keepIdx]
+  
+      // ✅ REEMPLAZO TOTAL del response_content
+      analysisArray[keepIdx] = {
+        ...p8,
+        response_content: {
+          industria_sasb: industria,
+          match_type: "manual",
+          score_seleccionado: 999,
+        },
+      }
+  
+      // ✅ Eliminar duplicados restantes
+      for (let i = p8Indexes.length - 1; i > 0; i--) {
+        analysisArray.splice(p8Indexes[i], 1)
+      }
+    }
+  
+    /* ============================
+       ✅ PROMPT 9 - reemplazar y deduplicar
+    ============================= */
+    const p9Indexes: number[] = []
+    analysisArray.forEach((a: any, idx: number) => {
+      if (typeof a?.name === "string" && a.name.includes("Prompt 9")) {
+        p9Indexes.push(idx)
+      }
+    })
+  
+    if (p9Indexes.length > 0) {
+      const keepIdx = p9Indexes[0]
+      const p9 = analysisArray[keepIdx]
+  
+      // ✅ REEMPLAZO TOTAL del response_content
+      analysisArray[keepIdx] = {
+        ...p9,
+        response_content: {
+          tabla_sasb: rows,
+        },
+      }
+  
+      // ✅ Eliminar duplicados restantes
+      for (let i = p9Indexes.length - 1; i > 0; i--) {
+        analysisArray.splice(p9Indexes[i], 1)
+      }
+    }
+  
+    // 6) Persistir JSON actualizado
+    ;(analysis as any).analysisJson = analysisArray
+    await this.esgAnalysisRepository.save(analysis)
+  
+    // 7) Mantener tu comportamiento original
+    return rows
+  }
+  
 }

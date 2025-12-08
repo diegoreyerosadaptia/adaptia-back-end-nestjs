@@ -13,12 +13,13 @@ import { Organization } from 'src/organizations/entities/organization.entity';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
 import { AnalysisStatusGateway } from './analysis-status.gateway';
+import { SasbListContent } from './entities/sasb_list_contents.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis, GriContent]),
+    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis, GriContent, SasbListContent]),
     BullModule.registerQueue({
-      name: 'esg-analysis',  // 👈 importante: mismo nombre que usás en InjectQueue
+      name: 'esg-analysis', 
     }),
   ],
   providers: [
