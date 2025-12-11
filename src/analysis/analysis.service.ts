@@ -159,6 +159,18 @@ async sendAnalysisUser(id: string) {
     const org = analysis.organization
     const recipientEmail = org.email || org.owner?.email
 
+    if (recipientEmail) {
+      await this.mailService.sendAnalysisEmail({
+        to: recipientEmail,
+        organizationName: org.company ?? org.name ?? 'tu organización',
+        analysisId: org.id,
+      })
+    } else {
+      this.logger.warn(
+        `No se encontró email de contacto para el análisis ${analysis.id} (org ${org?.id})`,
+      )
+    }
+
 
     analysis.shipping_status = 'SENT'
     await this.analysisRepository.save(analysis)
