@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -17,6 +17,7 @@ import { User } from 'src/users/entities/user.entity';
 import { EsgAnalysisService } from 'src/esg_analysis/esg_analysis.service';
 import { Coupon } from 'src/cupones/entities/cupone.entity';
 import { MailService } from 'src/analysis/mail.service';
+import { Paginated } from 'src/types/common/paginated.type';
 
 @Injectable()
 export class OrganizationsService {
@@ -134,35 +135,97 @@ export class OrganizationsService {
   }
 
   
-  async findAll(userId: string) {
-    try {
-      // 1️⃣ Buscar el usuario para saber su rol
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-  
-      if (!user) {
-        throw new NotFoundException('Usuario no encontrado');
-      }
-  
-      // 2️⃣ Si es ADMIN o SUPERADMIN, traer todas las organizaciones
-      const whereCondition =
-        user.role === 'ADMIN'
-          ? {} // sin filtro: todas las organizaciones
-          : { owner: { id: userId } }; // solo las del owner
-  
-      // 3️⃣ Buscar organizaciones con las relaciones necesarias
-      return await this.organizationRepository.find({
-        where: whereCondition,
-        relations: ['analysis', 'owner', 'esgAnalysis'],
-        order: { createdAt: 'DESC' },
-      });
-    } catch (error) {
-      this.logger.error(error.message, error.stack);
-      throw error;
+
+
+async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organization>> {
+  const user = await this.userRepository.findOne({
+    where: { id: userId },
+    select: { id: true, role: true },
+  })
+  if (!user) throw new NotFoundException("Usuario no encontrado")
+
+  const pageNum = Math.max(1, page)
+  const limitNum = Math.min(100, Math.max(1, limit))
+  const skip = (pageNum - 1) * limitNum
+
+  // Base QB (SIN mutarlo para count / ids)
+  const base = this.organizationRepository
+    .createQueryBuilder("o")
+    .leftJoin("o.owner", "owner")
+    .where("o.deletedAt IS NULL")
+
+  if (user.role !== "ADMIN") {
+    base.andWhere("owner.id = :userId", { userId })
+  }
+
+  // 1) total (clonado)
+  const total = await base.clone().distinct(true).getCount()
+
+  // 2) ids paginados (clonado, con offset/limit)
+  const idsRaw = await base
+    .clone()
+    .select("o.id", "id")
+    .orderBy("o.createdAt", "DESC")
+    .offset(skip)
+    .limit(limitNum)
+    .getRawMany<{ id: string }>()
+
+  const ids = idsRaw.map((r) => r.id)
+
+  const totalPages = Math.max(1, Math.ceil(total / limitNum))
+
+  if (ids.length === 0) {
+    return {
+      items: [],
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPages,
+      hasNext: false,
+      hasPrev: pageNum > 1,
     }
   }
-  
+
+  // 3) Traer entidades + relaciones para esos ids
+  const items = await this.organizationRepository.find({
+    where: { id: In(ids) },
+    relations: ["analysis", "owner", "esgAnalysis"],
+    select: {
+      id: true,
+      name: true,
+      lastName: true,
+      email: true,
+      company: true,
+      title: true,
+      industry: true,
+      employees_number: true,
+      phone: true,
+      country: true,
+      website: true,
+      document: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
+      // claimToken/claimExpiresAt/claimedAt NO
+    },
+  })
+
+  // mantener el orden exacto de la página
+  const map = new Map(items.map((o) => [o.id, o]))
+  const ordered = ids.map((id) => map.get(id)).filter(Boolean) as Organization[]
+
+  return {
+    items: ordered,
+    page: pageNum,
+    limit: limitNum,
+    total,
+    totalPages,
+    hasNext: pageNum < totalPages,
+    hasPrev: pageNum > 1,
+  }
+}
+
+
 
   async findOne(id: string) {
     try {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -19,13 +19,24 @@ export class OrganizationsController {
   }
 
 
-  @Get()
-  @UseGuards(SupabaseAuthGuard)
-  findAll(@Req() req) {
-    const userId = req.user.id;
-    return this.organizationsService.findAll(userId);
-  }
-  
+@Get()
+@UseGuards(SupabaseAuthGuard)
+findAll(
+  @Req() req: any,
+  @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+  @Query("limit", new DefaultValuePipe(15), ParseIntPipe) limit: number,
+) {
+  const userId = req.user.id;
+
+  const pageNum = Math.max(1, page);
+  const limitNum = Math.min(100, Math.max(1, limit));
+
+  console.log("[ORG] incoming", { page, limit, pageNum, limitNum });
+
+  return this.organizationsService.findAll(userId, pageNum, limitNum);
+}
+
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.organizationsService.findOne(id);

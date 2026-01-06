@@ -43,6 +43,8 @@ export default registerAs("database", (): TypeOrmModuleOptions => {
     // ✅ SSL también a nivel raíz (TypeORM) + extra (pg)
     ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
 
+    relationLoadStrategy: "query", 
+
     extra: {
       connectionTimeoutMillis: 15000,
       keepAlive: true,
