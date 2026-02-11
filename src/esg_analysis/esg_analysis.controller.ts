@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, HttpException, NotFoundException, Param, Put } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpException, NotFoundException, Param, Put, Get, Query } from '@nestjs/common';
 import { EsgAnalysisService } from './esg_analysis.service';
 
 
@@ -22,9 +22,15 @@ export class EsgAnalysisController {
 
   @Post('sasb')
   async getSasb(@Body() body: any) {
-    console.log('BODYY', body)
     return this.esgAnalysisService.getSasb(body.industria, body.esgAnalysisId);
   }
   
+  @Get("options")
+  getOptions(
+    @Query("objective") objective?: string,
+    @Query("meta") meta?: string,
+  ) {
+    return this.esgAnalysisService.getOptions({ objective, meta })
+  }
   
 }  

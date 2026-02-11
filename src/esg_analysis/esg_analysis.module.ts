@@ -14,10 +14,11 @@ import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
 import { AnalysisStatusGateway } from './analysis-status.gateway';
 import { SasbListContent } from './entities/sasb_list_contents.entity';
+import { OdsList } from './entities/ods_list.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis, GriContent, SasbListContent]),
+    TypeOrmModule.forFeature([EsgAnalysis, Organization, Analysis, GriContent, SasbListContent, OdsList]),
     BullModule.registerQueue({
       name: 'esg-analysis', 
     }),

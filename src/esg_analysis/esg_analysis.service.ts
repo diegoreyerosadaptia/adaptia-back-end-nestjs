@@ -9,6 +9,8 @@ import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { GriContent } from './entities/gri_contents.entity';
 import { AnalysisStatusGateway } from './analysis-status.gateway';
 import { SasbListContent } from './entities/sasb_list_contents.entity';
+import { OdsList } from './entities/ods_list.entity';
+import { OdsOptionsResponse } from './dto/ods-list.dto';
 
 @Injectable()
 export class EsgAnalysisService {
@@ -23,7 +25,9 @@ export class EsgAnalysisService {
     private readonly griRepo: Repository<GriContent>,
     @InjectRepository(SasbListContent)
     private readonly sasbRepo: Repository<SasbListContent>,
-    private readonly statusGateway: AnalysisStatusGateway, // ⭐ agregado
+    @InjectRepository(OdsList)
+    private readonly odsListRepo: Repository<OdsList>,
+    private readonly statusGateway: AnalysisStatusGateway,
   ) {}
 
   async runPythonEsgAnalysis(dto: CreateEsgAnalysisDto): Promise<EsgAnalysisResult> {
@@ -314,4 +318,99 @@ export class EsgAnalysisService {
     return rows
   }
   
+
+    private getObjectiveCodeFromOds(odsText?: string | null) {
+    if (!odsText) return null
+    const m = odsText.match(/Objetivo\s+(\d+)/i)
+    return m?.[1] ?? null
+  }
+
+  // Meta: "1.1 De aquí..." => "1.1"
+  private getMetaCode(metaText?: string | null) {
+    if (!metaText) return null
+    const m = metaText.match(/^(\d+\.\d+)/)
+    return m?.[1] ?? null
+  }
+
+  // Indicador: "1.1.1 Proporción..." => "1.1.1"
+  private getIndicadorCode(indText?: string | null) {
+    if (!indText) return null
+    const m = indText.match(/^(\d+\.\d+\.\d+)/)
+    return m?.[1] ?? null
+  }
+
+  async getOptions(params: { objective?: string; meta?: string }): Promise<OdsOptionsResponse> {
+    const { objective, meta } = params
+
+    // 1) Objectives: DISTINCT ods
+    const odsRows = await this.odsListRepo
+      .createQueryBuilder("o")
+      .select(["o.ods"])
+      .where("o.ods is not null")
+      .distinct(true)
+      .getMany()
+
+    const objectives = odsRows
+      .map((r) => {
+        const code = this.getObjectiveCodeFromOds(r.ods)
+        return code ? { code, label: r.ods } : null
+      })
+      .filter(Boolean) as { code: string; label: string }[]
+
+    // ordenar por número (1..17)
+    objectives.sort((a, b) => Number(a.code) - Number(b.code))
+
+    // 2) Metas filtradas por objective: meta ILIKE '1.%'
+    let metas: { code: string; label: string }[] = []
+    if (objective) {
+      const metaRows = await this.odsListRepo
+        .createQueryBuilder("o")
+        .select(["o.meta"])
+        .where("o.meta is not null")
+        .andWhere("o.meta ILIKE :pref", { pref: `${objective}.%` })
+        .distinct(true)
+        .getMany()
+
+      const seen = new Set<string>()
+      metas = metaRows
+        .map((r) => {
+          const code = this.getMetaCode(r.meta)
+          if (!code) return null
+          if (seen.has(code)) return null
+          seen.add(code)
+          return { code, label: r.meta }
+        })
+        .filter(Boolean) as { code: string; label: string }[]
+
+      metas.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
+    }
+
+    // 3) Indicadores filtrados por meta: indicador ILIKE '1.1.%'
+    let indicadores: { code: string; label: string }[] = []
+    if (meta) {
+      const indRows = await this.odsListRepo
+        .createQueryBuilder("o")
+        .select(["o.indicador"])
+        .where("o.indicador is not null")
+        .andWhere("o.indicador ILIKE :pref", { pref: `${meta}.%` })
+        .distinct(true)
+        .getMany()
+
+      const seen = new Set<string>()
+      indicadores = indRows
+        .map((r) => {
+          const code = this.getIndicadorCode(r.indicador)
+          if (!code) return null
+          if (seen.has(code)) return null
+          seen.add(code)
+          return { code, label: r.indicador }
+        })
+        .filter(Boolean) as { code: string; label: string }[]
+
+      indicadores.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
+    }
+
+    return { objectives, metas, indicadores }
+  }
 }
+

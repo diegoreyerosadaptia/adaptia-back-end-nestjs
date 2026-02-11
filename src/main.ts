@@ -11,11 +11,31 @@ async function bootstrap() {
   const logger = new Logger('NestApplication');
   const configService = app.get(ConfigService);
 
-  // 🌍 CORS
+  // 🌍 CORS (robusto para string "a,b" o array)
+  const allowedOriginsRaw = configService.get<string | string[]>('app.allowedOrigins') ?? []
+
+  const allowedOrigins = Array.isArray(allowedOriginsRaw)
+    ? allowedOriginsRaw
+    : allowedOriginsRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+
   app.enableCors({
-    origin: configService.getOrThrow('app.allowedOrigins'),
-    methods: 'GET,PUT,PATCH,POST,DELETE',
-  });
+    origin: (origin, callback) => {
+      // Permite requests sin Origin (Postman, server-to-server)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.includes(origin)) return callback(null, true)
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false)
+    },
+    credentials: true,
+    methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    optionsSuccessStatus: 204,
+  })
+
 
   // 🕐 Ajustes de timeout para llamadas largas (PDF/AI)
   setGlobalDispatcher(
