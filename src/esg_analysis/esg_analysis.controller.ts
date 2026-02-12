@@ -25,7 +25,7 @@ export class EsgAnalysisController {
     return this.esgAnalysisService.getSasb(body.industria, body.esgAnalysisId);
   }
   
-  @Get("options")
+  @Get("ods-list/options")
   getOptions(
     @Query("objective") objective?: string,
     @Query("meta") meta?: string,
