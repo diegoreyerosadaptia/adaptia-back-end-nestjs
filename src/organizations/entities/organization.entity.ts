@@ -62,6 +62,9 @@ export type EmployeesNumber = (typeof EMPLYEES_NUMBER)[number];
     @Column({ nullable: true })
     document: string;
 
+    @Column({ nullable: true })
+    supportingInfo: string;
+
     @Index({ unique: true })
     @Column({ type: 'uuid', nullable: true })
     claimToken: string | null;

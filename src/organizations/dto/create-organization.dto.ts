@@ -56,5 +56,9 @@ import {
   
     @IsOptional()
     ownerId: string;
+
+    @IsOptional()
+    @IsString()
+    supportingInfo?: string;
   }
   
