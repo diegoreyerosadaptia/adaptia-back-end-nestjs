@@ -12,6 +12,14 @@ import { SasbListContent } from './entities/sasb_list_contents.entity';
 import { OdsList } from './entities/ods_list.entity';
 import { OdsOptionsResponse } from './dto/ods-list.dto';
 
+type ColKey = "tema" | "ods" | "meta_ods" | "indicador_ods"
+const DEFAULT_HIDDEN_COLS: Record<ColKey, boolean> = {
+  tema: false,
+  ods: false,
+  meta_ods: false,
+  indicador_ods: false,
+}
+
 @Injectable()
 export class EsgAnalysisService {
   constructor(
@@ -29,6 +37,8 @@ export class EsgAnalysisService {
     private readonly odsListRepo: Repository<OdsList>,
     private readonly statusGateway: AnalysisStatusGateway,
   ) {}
+ 
+
 
   async runPythonEsgAnalysis(dto: CreateEsgAnalysisDto): Promise<EsgAnalysisResult> {
     const MAX_RETRIES = 1;
@@ -412,5 +422,94 @@ export class EsgAnalysisService {
 
     return { objectives, metas, indicadores }
   }
+
+
+
+  private findOdsSectionIndex(arr: any[]) {
+    return arr.findIndex(
+      (a: any) =>
+        typeof a?.name === "string" &&
+        (a.name.includes("Prompt 6") || a.name.includes("ODS")),
+    )
+  }
+
+  /**
+   * ✅ Asegura la estructura en analysisJson.
+   * - Si falta table_settings.hiddenCols, lo agrega con defaults.
+   * - Devuelve: { json, changed, hiddenCols }
+   */
+  private ensureOdsHiddenCols(analysisJsonRaw: any) {
+    // tu JSON normalmente es array. Aseguramos array + clon profundo.
+    const json = Array.isArray(analysisJsonRaw)
+      ? JSON.parse(JSON.stringify(analysisJsonRaw))
+      : JSON.parse(JSON.stringify(analysisJsonRaw))
+
+    const idx = this.findOdsSectionIndex(json)
+    if (idx === -1) {
+      return { json, changed: false, hiddenCols: DEFAULT_HIDDEN_COLS }
+    }
+
+    const section = json[idx]
+    section.response_content = section.response_content ?? {}
+    section.response_content.table_settings = section.response_content.table_settings ?? {}
+
+    const current = section.response_content.table_settings.hiddenCols
+
+    if (!current || typeof current !== "object") {
+      section.response_content.table_settings.hiddenCols = { ...DEFAULT_HIDDEN_COLS }
+      return { json, changed: true, hiddenCols: section.response_content.table_settings.hiddenCols }
+    }
+
+    // merge por si faltan keys
+    section.response_content.table_settings.hiddenCols = {
+      ...DEFAULT_HIDDEN_COLS,
+      ...current,
+    }
+
+    // changed si faltaba alguna key
+    const changed =
+      Object.keys(DEFAULT_HIDDEN_COLS).some((k) => typeof current[k] !== "boolean")
+
+    return { json, changed, hiddenCols: section.response_content.table_settings.hiddenCols }
+  }
+
+  async getEsgAnalysisById(id: string) {
+  const analysis = await this.esgAnalysisRepository.findOne({ where: { id } })
+  if (!analysis) throw new NotFoundException("Análisis no encontrado")
+
+  const { json, changed } = this.ensureOdsHiddenCols((analysis as any).analysisJson)
+
+  // ✅ lazy backfill: si el análisis viejo no tenía la estructura, lo guardamos
+  if (changed) {
+    ;(analysis as any).analysisJson = json
+    await this.esgAnalysisRepository.save(analysis)
+  }
+
+  return analysis
+}
+
+async setOdsHiddenCols(esgAnalysisId: string, hiddenCols: Partial<Record<ColKey, boolean>>) {
+  const analysis = await this.esgAnalysisRepository.findOne({ where: { id: esgAnalysisId } })
+  if (!analysis) throw new NotFoundException("Análisis no encontrado")
+
+  const { json } = this.ensureOdsHiddenCols((analysis as any).analysisJson)
+
+  const idx = this.findOdsSectionIndex(json)
+  if (idx === -1) throw new NotFoundException("Sección ODS no encontrada en analysisJson")
+
+  const section = json[idx]
+  section.response_content.table_settings.hiddenCols = {
+    ...DEFAULT_HIDDEN_COLS,
+    ...section.response_content.table_settings.hiddenCols,
+    ...hiddenCols, // ✅ aplica cambios
+  }
+
+  ;(analysis as any).analysisJson = json
+  await this.esgAnalysisRepository.save(analysis)
+
+  return section.response_content.table_settings.hiddenCols
+}
+
+
 }
 
