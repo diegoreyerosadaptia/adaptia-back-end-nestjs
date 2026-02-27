@@ -41,15 +41,17 @@ export class SupabaseAuthService {
     const { data, error } = await this.supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: "https://www.adaptianow.com/auth/login",
+      },
     });
 
     if (error || !data.user) {
-      throw new UnauthorizedException('❌ Error al registrar usuario');
+      throw new UnauthorizedException("❌ Error al registrar usuario");
     }
 
     return data;
   }
-
 
   async updatePassword(
     userId: string,
