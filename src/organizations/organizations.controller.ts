@@ -19,22 +19,20 @@ export class OrganizationsController {
   }
 
 
-@Get()
-@UseGuards(SupabaseAuthGuard)
-findAll(
-  @Req() req: any,
-  @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
-  @Query("limit", new DefaultValuePipe(15), ParseIntPipe) limit: number,
-) {
-  const userId = req.user.id;
+  @Get()
+  @UseGuards(SupabaseAuthGuard)
+  findAll(
+    @Req() req: any,
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(15), ParseIntPipe) limit: number,
+  ) {
+    const userId = req.user.id;
 
-  const pageNum = Math.max(1, page);
-  const limitNum = Math.min(100, Math.max(1, limit));
+    const pageNum = Math.max(1, page);
+    const limitNum = Math.min(100, Math.max(1, limit));
 
-  console.log("[ORG] incoming", { page, limit, pageNum, limitNum });
-
-  return this.organizationsService.findAll(userId, pageNum, limitNum);
-}
+    return this.organizationsService.findAll(userId, pageNum, limitNum);
+  }
 
 
   @Get(':id')

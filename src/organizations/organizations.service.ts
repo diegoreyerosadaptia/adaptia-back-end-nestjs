@@ -189,7 +189,7 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
   // 3) Traer entidades + relaciones para esos ids
   const items = await this.organizationRepository.find({
     where: { id: In(ids) },
-    relations: ["analysis", "owner", "esgAnalysis"],
+    relations: ["analysis", "analysis.coupon", "owner", "esgAnalysis"],
     select: {
       id: true,
       name: true,
@@ -209,6 +209,8 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
       // claimToken/claimExpiresAt/claimedAt NO
     },
   })
+
+  console.log(items)
 
   // mantener el orden exacto de la página
   const map = new Map(items.map((o) => [o.id, o]))
