@@ -7,10 +7,6 @@ export class PaymentsMethodsController {
     private readonly paymentsMethodsService: PaymentsMethodsService,
   ) {}
 
-  @Post('users/:userId')
-  create(@Param('userId') userId: string) {
-    return this.paymentsMethodsService.createMethodPayment(userId);
-  }
 
   @Get(':methodId')
   findOne(@Param('methodId') methodId: string) {
