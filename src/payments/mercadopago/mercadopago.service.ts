@@ -16,6 +16,7 @@ import { PaymentMethod } from '../payments-methods/entities/payments-method.enti
 import { EsgJobsService } from 'src/esg_analysis/esg_job.service';
 import { Analysis } from 'src/analysis/entities/analysis.entity';
 import { MailService } from 'src/analysis/mail.service';
+import { AnalyticsService } from 'src/analytics/analytics.service';
 
 @Injectable()
 export class MercadopagoService {
@@ -49,6 +50,8 @@ export class MercadopagoService {
     private readonly paymentsMethodsService: PaymentsMethodsService,
     private readonly jobsService: EsgJobsService,
     private readonly mailService: MailService,
+    private readonly analyticsService: AnalyticsService,
+
   ) {
     this.mercadopagoClient = new MercadoPagoConfig({
       accessToken: this.configService.getOrThrow<string>(
@@ -64,7 +67,7 @@ export class MercadopagoService {
   
 
 // 💳 Crear preferencia de pago
-async createPreference(user: User, organization: Organization) {
+async createPreference(user: User, organization: Organization, gaClientId?: string) {
   try {
     const employeeRange = organization.employees_number as typeof EMPLYEES_NUMBER[number];
 
@@ -105,10 +108,19 @@ async createPreference(user: User, organization: Organization) {
       );
     }
 
+    const pendingPayment = await this.paymentsMethodsService.createMethodPayment({
+      userId: user.id,
+      organizationId: organization.id,
+      gaClientId: gaClientId || null,
+      status: 'PENDING',
+      details: {},
+    });
+
     const title = `Plan Adaptia - ${organization.company}`;
     const description = `Análisis ESG para empresa (${employeeRange} empleados)`;
 
     const preferenceBody: PreferenceCreateData['body'] = {
+      external_reference: pendingPayment.id,
       metadata: {
         user_id: user.id,
         organization_id: organization.id,
@@ -147,6 +159,11 @@ async createPreference(user: User, organization: Organization) {
     const preference = new Preference(this.mercadopagoClient);
     const result = await preference.create({ body: preferenceBody });
 
+    pendingPayment.preferenceId = result.id ?? '';
+    pendingPayment.details = result as any;
+
+    await this.paymentMethodRepository.save(pendingPayment);
+
     return {
       id: result.id,
       init_point: result.init_point,
@@ -170,7 +187,7 @@ async createPreference(user: User, organization: Organization) {
     try {
       const paymentService = new Payment(this.mercadopagoClient);
       this.logger.debug(`Trying to fetch payment: ${paymentId}`);
-const paymentDetails = await paymentService.get({ id: paymentId });
+      const paymentDetails = await paymentService.get({ id: paymentId });
 
 
       const userId = paymentDetails.metadata?.user_id;
@@ -180,9 +197,11 @@ const paymentDetails = await paymentService.get({ id: paymentId });
           ? paymentDetails.additional_info.items[0].id
           : undefined;
 
+      const externalReference = paymentDetails.external_reference;
+
 
       await queryRunner.commitTransaction();
-      return { paymentDetails, userId, orgId };
+      return { paymentDetails, userId, orgId, externalReference };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(error.message, error.stack);
@@ -225,7 +244,7 @@ const paymentDetails = await paymentService.get({ id: paymentId });
             );
           }
 
-          const { paymentDetails, userId, orgId } =
+          const { paymentDetails, userId, orgId, externalReference } =
             await this.getPaymentDetails(paymentId);
 
           this.logger.log(`Payment details retrieved:
@@ -235,12 +254,19 @@ const paymentDetails = await paymentService.get({ id: paymentId });
             Status: ${paymentDetails?.status}
           `);
 
+          if (!externalReference) {
+              throw new NotFoundException(
+                `El pago ${paymentId} no tiene external_reference`,
+              );
+            }
+
           if (paymentDetails?.status === 'approved') {
             await this.processApprovedPayment(
               paymentDetails,
               userId,
               orgId || '',
               paymentId,
+              externalReference,
               queryRunner,
             );
           } else {
@@ -304,36 +330,53 @@ const paymentDetails = await paymentService.get({ id: paymentId });
     userId: string,
     orgId: string,
     paymentId: string,
+    externalReference: string,
     queryRunner,
-  ): Promise<void> {
+  ): Promise<void>{
     this.logger.log(`Processing approved payment:
       Payment ID: ${paymentId}
       User ID: ${userId}
       Org ID: ${orgId}
+      External Reference: ${externalReference}
     `);
 
     try {
-      const savedPaymentMethod =
-        await this.paymentsMethodsService.createMethodPayment(userId);
+      const savedPaymentMethod = await queryRunner.manager.findOne(PaymentMethod, {
+        where: { id: externalReference },
+        relations: ['user'],
+      });
+
+      if (!savedPaymentMethod) {
+        throw new NotFoundException(
+          `No se encontró el pago pendiente con id ${externalReference}`,
+        );
+      }
+
       savedPaymentMethod.details = paymentDetails as any;
       savedPaymentMethod.paymentId = paymentId;
-      await queryRunner.manager.save(
-        this.paymentMethodRepository.target,
-        savedPaymentMethod,
-      );
-      this.logger.debug(`Payment method saved successfully`);
+      savedPaymentMethod.status = 'APPROVED';
 
+      await queryRunner.manager.save(PaymentMethod, savedPaymentMethod);
+      this.logger.debug(`Payment method actualizado correctamente`);
 
-      this.logger.log(`Successfully processed payment and created user plan:
-        Payment ID: ${paymentId}
-      `);
       const org = await this.organizationRepository.findOne({
         where: { id: orgId },
         relations: ['analysis', 'owner'],
       });
-    
+      
       if (!org) {
         throw new NotFoundException('Organización no encontrada');
+      }
+
+      if (savedPaymentMethod.gaClientId) {
+        await this.analyticsService.sendPurchase({
+          clientId: savedPaymentMethod.gaClientId,
+          transactionId: paymentId,
+          value: Number(paymentDetails?.transaction_amount || 0),
+          currency: paymentDetails?.currency_id || 'USD',
+          organizationId: org.id,
+          organizationName: org.company,
+        });
       }
     
       // 🔹 Verificar que haya análisis

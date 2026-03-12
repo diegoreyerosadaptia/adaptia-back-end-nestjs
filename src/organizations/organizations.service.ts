@@ -210,8 +210,6 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
     },
   })
 
-  console.log(items)
-
   // mantener el orden exacto de la página
   const map = new Map(items.map((o) => [o.id, o]))
   const ordered = ids.map((id) => map.get(id)).filter(Boolean) as Organization[]

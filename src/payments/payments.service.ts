@@ -40,7 +40,7 @@ export class PaymentsService {
       }
 
       const mercadoPagoResponse =
-        await this.mercadopagoService.createPreference(user, organization);
+        await this.mercadopagoService.createPreference(user, organization, createPaymentDto.gaClientId);
 
       return {
         checkoutUrl: mercadoPagoResponse.init_point || '',

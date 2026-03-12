@@ -15,4 +15,7 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   organizationId: string;
 
+  @IsOptional()
+  @IsString()
+  gaClientId?: string
 }

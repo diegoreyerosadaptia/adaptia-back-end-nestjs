@@ -20,7 +20,23 @@ export class PaymentsMethodsService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async createMethodPayment(userId: string) {
+  async createMethodPayment({
+    userId,
+    organizationId,
+    gaClientId,
+    status = 'PENDING',
+    details = {},
+    preferenceId = '',
+    paymentId = '',
+  }: {
+    userId: string;
+    organizationId?: string;
+    gaClientId?: string | null;
+    status?: string;
+    details?: any;
+    preferenceId?: string;
+    paymentId?: string;
+  }) {
     try {
       const method = this.paymentMethodRepository.create();
 
@@ -28,14 +44,20 @@ export class PaymentsMethodsService {
         const user = await this.userRepository.findOne({
           where: { id: userId },
         });
+
         if (!user) {
           throw new NotFoundException('User not found');
         }
+
         method.user = user;
       }
 
-      method.details = JSON.parse(JSON.stringify({}));
-      method.paymentId = '';
+      method.organizationId = organizationId || '';
+      method.gaClientId = gaClientId || '';
+      method.status = status;
+      method.details = JSON.parse(JSON.stringify(details ?? {}));
+      method.paymentId = paymentId;
+      method.preferenceId = preferenceId;
 
       const savedMethod = await this.paymentMethodRepository.save(method);
       return savedMethod;
