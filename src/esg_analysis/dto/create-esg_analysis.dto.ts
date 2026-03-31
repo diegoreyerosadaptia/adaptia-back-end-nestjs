@@ -25,4 +25,8 @@ export class CreateEsgAnalysisDto {
     @IsString()
     @IsOptional()
     document: string
+
+    @IsOptional()
+    @IsString()
+    supportingInfo?: string;
 }

@@ -68,6 +68,7 @@ export class EsgAnalysisService {
               website: dto.website,
               industry: dto.industry,
               document: dto.document,
+              supportingInfo: dto.supportingInfo
             }),
             signal: controller.signal,
           },
