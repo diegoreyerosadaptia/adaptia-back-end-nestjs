@@ -203,6 +203,7 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
       country: true,
       website: true,
       document: true,
+      supportingInfo: true,
       createdAt: true,
       updatedAt: true,
       deletedAt: true,

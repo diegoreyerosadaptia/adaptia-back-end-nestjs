@@ -12,6 +12,7 @@ export class EsgJobProcessor {
     console.log(`📥 Procesando job ${job.id} para ${job.data.organization_name}`);
 
     try {
+      console.log("jobb", job.data)
       const result = await this.esgAnalysisService.runPythonEsgAnalysis(job.data);
 
       if (result.status === 'INCOMPLETE') {
