@@ -54,7 +54,7 @@ export class AuthService {
           email: user.email,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -74,7 +74,7 @@ export class AuthService {
       }
 
       return verificationToken;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -93,7 +93,7 @@ export class AuthService {
       }
 
       return verificationToken;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -115,7 +115,7 @@ export class AuthService {
       }
 
       return passwordResetToken;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -139,7 +139,7 @@ export class AuthService {
       }
 
       return passwordResetToken;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -174,7 +174,7 @@ export class AuthService {
       await this.verificationTokenRepository.save(verificationToken);
 
       return verificationToken;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -207,7 +207,7 @@ export class AuthService {
       await this.passwordResetTokenRepository.save(passwordResetToken);
 
       return passwordResetToken;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -226,7 +226,7 @@ export class AuthService {
       await this.verificationTokenRepository.remove(verificationToken);
 
       return { message: 'Verification token deleted' };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -248,7 +248,7 @@ export class AuthService {
       await this.passwordResetTokenRepository.remove(passwordResetToken);
 
       return { message: 'Password reset token deleted' };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -281,7 +281,7 @@ export class AuthService {
             email: updatedUser.email,
           },
         };
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(error.message, error.stack);
         throw error;
       }

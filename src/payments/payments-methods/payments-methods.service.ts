@@ -61,7 +61,7 @@ export class PaymentsMethodsService {
 
       const savedMethod = await this.paymentMethodRepository.save(method);
       return savedMethod;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -78,7 +78,7 @@ export class PaymentsMethodsService {
         throw new BadRequestException('method not found');
       }
       return method;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -96,7 +96,7 @@ export class PaymentsMethodsService {
         throw new BadRequestException('user not found');
       }
       return user;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }

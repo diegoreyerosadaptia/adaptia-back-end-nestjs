@@ -127,7 +127,7 @@ export class OrganizationsService {
         ...created,
         ...(isAnonymous ? { claimToken } : {}),
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack)
       throw error
     }
@@ -240,7 +240,7 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
       }
 
       return org;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -271,7 +271,7 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
 
       this.logger.log(`Organization "${result.name}" updated successfully`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException || error instanceof BadRequestException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -290,7 +290,7 @@ async findAll(userId: string, page = 1, limit = 15): Promise<Paginated<Organizat
       await this.organizationRepository.remove(org);
 
       return { message: 'Organization removed successfully' };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -366,7 +366,7 @@ async applyCoupon(analysisId: string, coupon: string) {
       },
       discount_percentage: percentageNumber,
     }
-  } catch (error) {
+  } catch (error: any) {
     if (!(error instanceof NotFoundException)) {
       this.logger.error(error.message, error.stack)
     }

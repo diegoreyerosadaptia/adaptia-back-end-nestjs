@@ -87,7 +87,7 @@ export class UsersService {
   
       await queryRunner.commitTransaction()
       return savedUser
-    } catch (error) {
+    } catch (error: any) {
       await queryRunner.rollbackTransaction()
       this.logger.error(error.message, error.stack)
       throw error
@@ -101,7 +101,7 @@ export class UsersService {
       return await this.userRepository.find({
         order: { createdAt: 'DESC' }
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -119,7 +119,7 @@ export class UsersService {
       }
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -156,7 +156,7 @@ export class UsersService {
 
       this.logger.log(`User "${result.email}" updated successfully`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       if (
         !(
           error instanceof NotFoundException ||
@@ -180,7 +180,7 @@ export class UsersService {
       await this.userRepository.remove(user);
 
       return { message: 'User removed successfully' };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -197,7 +197,7 @@ export class UsersService {
       }
 
       await this.userRepository.softDelete(id);
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -220,7 +220,7 @@ export class UsersService {
       }
 
       await this.userRepository.restore(id);
-    } catch (error) {
+    } catch (error: any) {
       if (
         !(
           error instanceof NotFoundException ||
@@ -247,7 +247,7 @@ export class UsersService {
 
       const hasPassword = user.password !== null && user.password !== '';
       return { hasPassword };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -287,7 +287,7 @@ export class UsersService {
       user.password = hashedPassword;
 
       return this.userRepository.save(user);
-    } catch (error) {
+    } catch (error: any) {
       if (
         !(
           error instanceof NotFoundException ||

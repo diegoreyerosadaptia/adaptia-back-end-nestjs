@@ -30,7 +30,7 @@ export class AnalysisService {
       const analysis = this.analysisRepository.create(createAnalysisDto);
 
       return await this.analysisRepository.save(analysis);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -41,7 +41,7 @@ export class AnalysisService {
       return await this.analysisRepository.find({
         relations: ['organization']
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -59,7 +59,7 @@ export class AnalysisService {
       }
 
       return analysis;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -94,7 +94,7 @@ export class AnalysisService {
 
       this.logger.log(`Analysis "${result.id}" updated successfully`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException || error instanceof BadRequestException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -112,7 +112,7 @@ export class AnalysisService {
 
       await this.analysisRepository.remove(analysis);
       return { message: 'Analysis removed successfully' };
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -136,7 +136,7 @@ export class AnalysisService {
       await this.analysisRepository.save(analysis);
 
       return analysis;
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
@@ -176,7 +176,7 @@ async sendAnalysisUser(id: string) {
     await this.analysisRepository.save(analysis)
 
     return analysis
-  } catch (error) {
+  } catch (error: any) {
     if (!(error instanceof NotFoundException)) {
       this.logger.error(error.message, error.stack)
     }

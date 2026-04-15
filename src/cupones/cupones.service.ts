@@ -36,7 +36,7 @@ export class CuponesService {
       await this.cuponRepository.save(cupon)
       this.logger.log(`Cupón creado correctamente (id=${cupon.id})`)
       return cupon
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error al crear cupón. Payload: ${JSON.stringify(createCuponeDto)}`,
         error.stack,
@@ -48,7 +48,7 @@ export class CuponesService {
   async findAll(): Promise<Coupon[]> {
     try {
       return await this.cuponRepository.find()
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Error al obtener los cupones', error.stack)
       throw new InternalServerErrorException(
         'Error al obtener la lista de cupones',
@@ -66,7 +66,7 @@ export class CuponesService {
       }
 
       return cupon
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof NotFoundException) throw error
 
       this.logger.error(`Error al buscar cupón (id=${id})`, error.stack)
@@ -88,7 +88,7 @@ export class CuponesService {
 
       this.logger.log(`Cupón actualizado correctamente (id=${id})`)
       return updated
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof NotFoundException) throw error
 
       this.logger.error(
@@ -123,7 +123,7 @@ export class CuponesService {
       }
 
       this.logger.log(`Cupón eliminado correctamente (id=${id})`);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
 
       this.logger.error(
@@ -206,7 +206,7 @@ export class CuponesService {
       )
 
       return targetAnalysis
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof NotFoundException) throw error
 
       this.logger.error(

@@ -4,15 +4,15 @@ export class CreateEsgAnalysisDto {
 
     @IsString()
     @IsNotEmpty()
-    organization_name: string
+    organization_name!: string
 
     @IsString()
     @IsNotEmpty()
-    country: string
+    country!: string
 
     @IsString()
     @IsNotEmpty()
-    website: string
+    website!: string
 
     @IsString()
     @IsOptional()
@@ -20,13 +20,17 @@ export class CreateEsgAnalysisDto {
 
     @IsString()
     @IsNotEmpty()
-    industry: string
+    industry!: string
 
     @IsString()
     @IsOptional()
-    document: string
+    document!: string
 
     @IsOptional()
     @IsString()
     supportingInfo?: string;
+
+    @IsOptional()
+    @IsString()
+    employees_number?: string;
 }

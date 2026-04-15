@@ -173,7 +173,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
       discountAmount,
       finalPrice,
     };
-  } catch (error) {
+  } catch (error: any) {
     this.logger.error(error.message, error.stack);
     throw error;
   }
@@ -202,7 +202,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
 
       await queryRunner.commitTransaction();
       return { paymentDetails, userId, orgId, externalReference };
-    } catch (error) {
+    } catch (error: any) {
       await queryRunner.rollbackTransaction();
       this.logger.error(error.message, error.stack);
       throw error;
@@ -288,7 +288,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
             message: `Event type ${payload.type} not implemented`,
           };
       }
-    } catch (error) {
+    } catch (error: any) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Error processing webhook: ${error.message}`, {
         error: error.stack,
@@ -421,7 +421,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
         )
       }
       
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error processing approved payment: ${error.message}`, {
         error: error.stack,
         paymentId,
@@ -442,7 +442,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message, error.stack);
       throw error;
     }
@@ -479,7 +479,7 @@ async createPreference(user: User, organization: Organization, gaClientId?: stri
         message:
           'MercadoPago service is properly configured and API is accessible',
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Health check failed:', error);
       return {
         status: 'error',

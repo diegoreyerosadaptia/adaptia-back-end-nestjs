@@ -56,7 +56,7 @@ export class AnalyticsService {
           }),
         },
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Error enviando evento a GA4', error);
     }
   }

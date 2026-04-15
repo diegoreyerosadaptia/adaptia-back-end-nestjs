@@ -47,7 +47,7 @@ export class PaymentsService {
         sandboxUrl: mercadoPagoResponse.sandbox,
       };
 
-    } catch (error) {
+    } catch (error: any) {
       if (!(error instanceof NotFoundException)) {
         this.logger.error(error.message, error.stack);
       }
